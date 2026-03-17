@@ -1,0 +1,84 @@
+# Example Codex config for a guarded automation setup.
+#
+# This file is intentionally illustrative. It is not meant to be copied
+# directly into `.codex/config.toml` without validating the hook schema
+# against the installed `codex-cli` build.
+#
+# Confirmed against local `codex-cli 0.114.0`:
+# - these top-level settings are real
+# - `features.codex_hooks = true` is real
+# - the hook event names `SessionStart`, `Stop`, `after_tool_use`,
+#   and `after_agent` are real
+#
+# Not yet confirmed from official docs:
+# - the exact TOML structure used to register those hooks
+
+web_search = "disabled"
+tools.view_image = false
+model = "gpt-5"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[features]
+shell_tool = true
+multi_agent = false
+apps = false
+image_generation = false
+codex_hooks = true
+
+# Optional hardening ideas outside hooks.
+[shell_environment_policy]
+inherit = "core"
+
+[ghost_snapshot]
+ignore_large_untracked_dirs = true
+
+# --------------------------------------------------------------------
+# Illustrative hook layout only. Treat this as pseudo-config until the
+# exact Codex hook registry format is validated.
+# --------------------------------------------------------------------
+
+[hooks]
+
+[[hooks.session_start]]
+event = "SessionStart"
+type = "command"
+command = "python3 scripts/codex-hooks/session_start_guard.py"
+timeout_ms = 2000
+purpose = "Block unapproved working roots and inject guardrail context."
+
+[[hooks.after_tool_use]]
+event = "after_tool_use"
+type = "command"
+command = "python3 scripts/codex-hooks/after_tool_use_audit.py"
+timeout_ms = 3000
+purpose = "Audit shell/apply-patch actions after execution and abort follow-up work on risky behavior."
+
+[[hooks.after_agent]]
+event = "after_agent"
+type = "command"
+command = "python3 scripts/codex-hooks/after_agent_guard.py"
+timeout_ms = 2000
+purpose = "Reject final turns that recommend bypass flags, expose secrets, or skip verification."
+
+[[hooks.stop]]
+event = "Stop"
+type = "command"
+command = "python3 scripts/codex-hooks/stop_guard.py"
+timeout_ms = 2000
+purpose = "Block task completion when local-state files or unresolved policy violations remain."
+
+# --------------------------------------------------------------------
+# Suggested companion scripts for a mature setup
+# --------------------------------------------------------------------
+#
+# scripts/codex-hooks/session_start_guard.py
+# scripts/codex-hooks/after_tool_use_audit.py
+# scripts/codex-hooks/after_agent_guard.py
+# scripts/codex-hooks/stop_guard.py
+#
+# Design notes:
+# - `SessionStart` is the best place to fail closed early and add system context.
+# - There is no confirmed pre-tool hook in this Codex build.
+# - `after_tool_use` is detection and interruption, not first-action prevention.
+# - `Stop` is the best place to prevent "task completed" when the repo state is unsafe.

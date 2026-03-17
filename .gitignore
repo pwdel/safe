@@ -3,3 +3,10 @@
 
 .claude/*
 !.claude/README.md
+
+.opencode/*
+!.opencode/README.md
+!.opencode/plugins/
+!.opencode/plugins/guardrails.js
+
+.opencode-runtime/
