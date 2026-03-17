@@ -64,3 +64,4 @@ This repo is intentionally checked in as a project so the setup can be versioned
 - See `docs/opencode-guardrails-plugin.example.ts` for a TypeScript sample guardrails plugin
 - See `docs/codex-hooks.md` for the Codex versus OpenCode tradeoff
 - Start the local simulation with `cd ~/Projects/safe && bash scripts/opencode-local.sh`
+- Log in to an OpenCode provider inside the local simulation with `cd ~/Projects/safe && bash scripts/opencode-local.sh auth login`
