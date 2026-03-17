@@ -6,3 +6,4 @@ shell_tool = true
 multi_agent = false
 apps = false
 image_generation = false
+codex_hooks = true
