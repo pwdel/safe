@@ -1,0 +1,8 @@
+web_search = "disabled"
+tools.view_image = false
+
+[features]
+shell_tool = true
+multi_agent = false
+apps = false
+image_generation = false
