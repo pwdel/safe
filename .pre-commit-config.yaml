@@ -1,0 +1,24 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: codex-safe-config
+        name: Enforce repo-local Codex safe defaults
+        entry: python3 scripts/hooks/check_codex_safe_config.py
+        language: system
+        files: ^(\.codex/config\.toml|README\.md|\.envrc)$
+        pass_filenames: false
+
+      - id: no-local-state-in-git
+        name: Block repo-local private state from git
+        entry: bash scripts/hooks/check_local_state.sh
+        language: system
+        pass_filenames: true
