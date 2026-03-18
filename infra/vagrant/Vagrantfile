@@ -1,12 +1,31 @@
+box_name = ENV["SAFE_VAGRANT_BOX"]
+provider = ENV.fetch("SAFE_VAGRANT_PROVIDER", "virtualbox")
+
+unless box_name
+  raise <<~MSG
+    SAFE_VAGRANT_BOX is required.
+
+    Example:
+      SAFE_VAGRANT_BOX=<provider-compatible-arm-box> vagrant up
+
+    Choose the box intentionally for your Mac and provider instead of assuming
+    an old global default will work on Apple silicon.
+  MSG
+end
+
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/noble64"
+  config.vm.box = box_name
   config.vm.hostname = "safe-vm"
   config.vm.synced_folder ".", "/vagrant", disabled: true
 
-  config.vm.provider "virtualbox" do |vb|
-    vb.name = "safe-vm"
-    vb.memory = 4096
-    vb.cpus = 2
+  if provider == "virtualbox"
+    config.vm.provider "virtualbox" do |vb|
+      vb.name = "safe-vm"
+      vb.memory = 4096
+      vb.cpus = 2
+    end
+  else
+    raise "Unsupported SAFE_VAGRANT_PROVIDER=#{provider.inspect} in current scaffold"
   end
 
   config.vm.network "forwarded_port", guest: 22, host: 2222, id: "ssh", auto_correct: true

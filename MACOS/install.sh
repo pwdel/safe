@@ -55,7 +55,9 @@ if [[ "$INSTALL_DOCKER" == "1" ]]; then
   brew install --cask docker-desktop
 fi
 
-brew install --cask virtualbox vagrant
+brew install --cask virtualbox
+brew tap hashicorp/tap
+brew install hashicorp/tap/hashicorp-vagrant
 
 append_if_missing "$HOME/.zshrc" 'eval "$(direnv hook zsh)"'
 append_if_missing "$HOME/.zshrc" 'export PATH="/opt/homebrew/opt/gettext/bin:$PATH"'

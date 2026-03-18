@@ -79,12 +79,13 @@ These are installed as Homebrew casks:
 - `codex`
 - `docker-desktop`
 - `virtualbox`
-- `vagrant`
 
 Install them with:
 
 ```bash
-brew install --cask codex docker-desktop virtualbox vagrant
+brew install --cask codex docker-desktop virtualbox
+brew tap hashicorp/tap
+brew install hashicorp/tap/hashicorp-vagrant
 ```
 
 ## Shell configuration
@@ -272,8 +273,12 @@ This repo contributes a pattern more than extra machine prerequisites:
 Vagrant is required for the VM boundary:
 
 ```bash
-brew install --cask virtualbox vagrant
+brew install --cask virtualbox
+brew tap hashicorp/tap
+brew install hashicorp/tap/hashicorp-vagrant
 ```
+
+On Apple silicon, the box/provider pair should be selected explicitly per project. The `safe` scaffold does not assume one universal default box.
 
 ## Ansible
 

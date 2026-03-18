@@ -33,10 +33,20 @@ Important defaults:
 
 ## Current workflow intent
 
-- `vagrant up` boots Ubuntu
+- `SAFE_VAGRANT_BOX=<provider-compatible-arm-box> vagrant up` boots Ubuntu
 - Ansible installs Docker and creates users and workspace directories
 - Docker runs a coding container against a fork cloned under `/srv/workspaces/forks`
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
+
+## Box selection
+
+The Vagrantfile intentionally requires `SAFE_VAGRANT_BOX` instead of hard-coding a legacy default.
+
+Reason:
+
+- macOS Apple silicon support changed recently
+- provider support and available ARM boxes are still uneven
+- older Ubuntu Vagrant box names are not a reliable universal default anymore
 
 ## Fork workflow
 
