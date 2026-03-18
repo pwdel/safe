@@ -1,20 +1,10 @@
-box_name = ENV["SAFE_VAGRANT_BOX"]
+box_name = ENV.fetch("SAFE_VAGRANT_BOX", "hashicorp-education/ubuntu-24-04")
+box_version = ENV.fetch("SAFE_VAGRANT_BOX_VERSION", "0.1.0")
 provider = ENV.fetch("SAFE_VAGRANT_PROVIDER", "virtualbox")
-
-unless box_name
-  raise <<~MSG
-    SAFE_VAGRANT_BOX is required.
-
-    Example:
-      SAFE_VAGRANT_BOX=<provider-compatible-arm-box> vagrant up
-
-    Choose the box intentionally for your Mac and provider instead of assuming
-    an old global default will work on Apple silicon.
-  MSG
-end
 
 Vagrant.configure("2") do |config|
   config.vm.box = box_name
+  config.vm.box_version = box_version
   config.vm.hostname = "safe-vm"
   config.vm.synced_folder ".", "/vagrant", disabled: true
 

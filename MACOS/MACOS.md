@@ -280,6 +280,18 @@ brew install hashicorp/tap/hashicorp-vagrant
 
 On Apple silicon, the box/provider pair should be selected explicitly per project. The `safe` scaffold does not assume one universal default box.
 
+For `safe`, the current default scaffold uses:
+
+- provider: `virtualbox`
+- box: `hashicorp-education/ubuntu-24-04`
+- version: `0.1.0`
+
+If VirtualBox on Apple silicon fails to boot the guest, HashiCorp’s docs note this workaround:
+
+```bash
+VBoxManage setextradata global "VBoxInternal/Devices/pcbios/0/Config/DebugLevel"
+```
+
 ## Ansible
 
 Ansible is required on the host and is used to provision the guest:

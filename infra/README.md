@@ -33,20 +33,43 @@ Important defaults:
 
 ## Current workflow intent
 
-- `SAFE_VAGRANT_BOX=<provider-compatible-arm-box> vagrant up` boots Ubuntu
+- `vagrant up --provider=virtualbox` boots Ubuntu
 - Ansible installs Docker and creates users and workspace directories
 - Docker runs a coding container against a fork cloned under `/srv/workspaces/forks`
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
 
 ## Box selection
 
-The Vagrantfile intentionally requires `SAFE_VAGRANT_BOX` instead of hard-coding a legacy default.
+Default scaffold choice:
 
-Reason:
+- provider: `virtualbox`
+- box: `hashicorp-education/ubuntu-24-04`
+- version: `0.1.0`
+
+These defaults come from current HashiCorp Vagrant tutorials for Apple silicon with VirtualBox.
+
+You can still override them:
+
+```bash
+SAFE_VAGRANT_BOX=your-box-name \
+SAFE_VAGRANT_BOX_VERSION=your-version \
+SAFE_VAGRANT_PROVIDER=virtualbox \
+vagrant up
+```
+
+Reason for still keeping overrides available:
 
 - macOS Apple silicon support changed recently
 - provider support and available ARM boxes are still uneven
 - older Ubuntu Vagrant box names are not a reliable universal default anymore
+
+## Apple silicon note
+
+HashiCorp’s current docs note that on macOS Apple silicon you may need to unset this VirtualBox global setting before booting VMs:
+
+```bash
+VBoxManage setextradata global "VBoxInternal/Devices/pcbios/0/Config/DebugLevel"
+```
 
 ## Fork workflow
 
