@@ -55,6 +55,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 
 These tools cover the repos currently under `~/Projects`:
 
+- `ansible`
 - `direnv`
 - `uv`
 - `pyenv`
@@ -68,7 +69,7 @@ These tools cover the repos currently under `~/Projects`:
 Install them with:
 
 ```bash
-brew install direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
+brew install ansible direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
 ```
 
 ### GUI and larger tooling
@@ -77,12 +78,13 @@ These are installed as Homebrew casks:
 
 - `codex`
 - `docker-desktop`
+- `virtualbox`
 - `vagrant`
 
 Install them with:
 
 ```bash
-brew install --cask codex docker-desktop vagrant
+brew install --cask codex docker-desktop virtualbox vagrant
 ```
 
 ## Shell configuration
@@ -187,6 +189,19 @@ bash scripts/opencode-local.sh auth login
 bash scripts/opencode-local.sh
 ```
 
+## VM and provisioning layer
+
+For this repo, Ansible and Vagrant are required parts of the host setup.
+
+The intended layering is:
+
+- macOS host for interactive control and credentials
+- Vagrant VM for the first containment boundary
+- Docker inside the VM for the actual automated coding runtime
+- writable fork clones inside the VM, not directly on the macOS host
+
+This is the model we want for running Codex or Claude Code with bypassed internal permissions while still keeping containment boundaries around the work.
+
 ## Repo-specific bootstrap steps
 
 ### `safe`
@@ -254,10 +269,18 @@ This repo contributes a pattern more than extra machine prerequisites:
 
 ## Vagrant
 
-Vagrant is included as an optional next step for isolating automated coding work in a VM:
+Vagrant is required for the VM boundary:
 
 ```bash
-brew install --cask vagrant
+brew install --cask virtualbox vagrant
+```
+
+## Ansible
+
+Ansible is required on the host and is used to provision the guest:
+
+```bash
+brew install ansible
 ```
 
 This repo does not yet define a Vagrant machine. The goal here is only to ensure the Mac host has the prerequisite installed before that work starts.
@@ -274,7 +297,6 @@ bash MACOS/install.sh
 Optional environment flags:
 
 - `INSTALL_DOCKER=0` to skip Docker Desktop
-- `INSTALL_VAGRANT=0` to skip Vagrant
 - `INSTALL_CODEX=0` to skip the Codex cask
 - `PYTHON_VERSION=3.12` to change the `uv python install` target
 
@@ -286,9 +308,11 @@ Optional environment flags:
 - `pyenv --version`
 - `pre-commit --version`
 - `opencode --version`
+- `ansible --version`
 - `codex --version`
 - `docker --version`
 - `docker compose version`
+- `VBoxManage --version`
 - `vagrant --version`
 
 ## Source notes
