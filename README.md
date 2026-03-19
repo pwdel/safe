@@ -25,9 +25,10 @@ This repo is intentionally checked in as a project so the setup can be versioned
 
 ```bash
 cd ~/Projects/safe
-direnv allow
 pre-commit install
 codex
 bash scripts/opencode-local.sh
 bash infra/scripts/bootstrap_mac.sh
 ```
+
+For the Multipass workflow, `direnv` is optional. It is only needed if you want the repo-local `.envrc` behavior for tools like Codex.

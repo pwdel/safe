@@ -30,13 +30,27 @@ Important defaults:
 - the checked-in `safe/` repo is copied into the guest at `/opt/safe-control`
 - writable coding work is expected under `/srv/workspaces/forks`
 - the macOS host remains the control plane rather than the direct automation runtime
+- local inventory is generated at `infra/ansible/inventory/hosts.yml` and should not be committed
 
 ## Current workflow intent
 
 - `bash infra/scripts/bootstrap_mac.sh` launches Ubuntu in Multipass and applies Ansible
+- the bootstrap script seeds `~/.ssh/id_ed25519.pub` into the guest's `ubuntu` account so Ansible can connect
 - Ansible installs Docker and creates users and workspace directories
 - Docker runs a coding container against a fork cloned under `/srv/workspaces/forks`
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
+
+## What Bootstrap Creates
+
+After a successful bootstrap:
+
+- Multipass instance `safevm` exists and is running
+- the control-plane repo is available in the guest at `/opt/safe-control`
+- Docker is installed in the guest
+- helper commands exist in the guest:
+  - `/usr/local/bin/safe-start-runner`
+  - `/usr/local/bin/safe-clone-fork`
+- writable fork workspaces exist at `/srv/workspaces/forks`
 
 ## Why Multipass here
 

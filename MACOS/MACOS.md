@@ -238,10 +238,15 @@ Vagrant still belongs in the broader machine setup toolbox, but it is not the re
 
 ```bash
 cd ~/Projects/safe
-direnv allow
 pre-commit install
 bash infra/scripts/bootstrap_mac.sh
 ```
+
+Notes:
+
+- `direnv allow` is optional for VM bootstrap; it is only needed if you want repo-local environment overrides such as `CODEX_HOME`
+- `bash infra/scripts/bootstrap_mac.sh` creates or starts the Multipass instance `safevm`, copies the control repo into the guest, writes `infra/ansible/inventory/hosts.yml`, seeds your `~/.ssh/id_ed25519.pub` into the guest, and runs Ansible provisioning
+- `bash infra/scripts/mp-shell.sh` opens a shell in the guest after bootstrap
 
 ### `mlx-test`
 

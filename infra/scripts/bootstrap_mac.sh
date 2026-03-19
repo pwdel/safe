@@ -16,6 +16,14 @@ INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$INFRA_DIR/.." && pwd)"
 ANSIBLE_DIR="$INFRA_DIR/ansible"
 INVENTORY_SCRIPT="$ANSIBLE_DIR/scripts/gen_inventory_from_multipass.sh"
+ARCHIVE_PATH="$(mktemp /tmp/safe-bootstrap.XXXXXX.tar.gz)"
+SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY:-$HOME/.ssh/id_ed25519.pub}"
+
+cleanup() {
+  rm -f "$ARCHIVE_PATH"
+}
+
+trap cleanup EXIT
 
 require_cmd() {
   local cmd="$1"
@@ -28,6 +36,12 @@ require_cmd() {
 require_cmd multipass
 require_cmd ansible-playbook
 require_cmd ssh-keygen
+require_cmd tar
+
+if [[ ! -f "$SSH_PUBLIC_KEY" ]]; then
+  echo "SSH public key not found: $SSH_PUBLIC_KEY" >&2
+  exit 1
+fi
 
 if ! multipass info "$VM_NAME" >/dev/null 2>&1; then
   multipass launch "$VM_IMAGE" --name "$VM_NAME" --cpus "$VM_CPUS" --memory "$VM_MEMORY" --disk "$VM_DISK"
@@ -37,8 +51,21 @@ fi
 
 multipass exec "$VM_NAME" -- sudo mkdir -p /opt/safe-control
 multipass exec "$VM_NAME" -- sudo rm -rf /opt/safe-control/*
-multipass transfer -r "$REPO_ROOT"/ "$VM_NAME":/tmp/safe-control
+
+tar \
+  --exclude='.git' \
+  --exclude='.opencode-runtime' \
+  --exclude='infra/ansible/.ansible' \
+  --exclude='infra/ansible/inventory/hosts.yml' \
+  -czf "$ARCHIVE_PATH" \
+  -C "$REPO_ROOT" .
+
+multipass exec "$VM_NAME" -- bash -lc 'rm -rf /tmp/safe-control /tmp/safe-control.tgz && mkdir -p /tmp/safe-control'
+multipass transfer "$ARCHIVE_PATH" "$VM_NAME":/tmp/safe-control.tgz
+multipass exec "$VM_NAME" -- bash -lc 'tar -xzf /tmp/safe-control.tgz -C /tmp/safe-control'
 multipass exec "$VM_NAME" -- sudo bash -lc 'cp -a /tmp/safe-control/. /opt/safe-control/'
+PUBKEY_CONTENT="$(cat "$SSH_PUBLIC_KEY")"
+multipass exec "$VM_NAME" -- bash -lc "mkdir -p ~/.ssh && chmod 700 ~/.ssh && grep -qxF '$PUBKEY_CONTENT' ~/.ssh/authorized_keys 2>/dev/null || printf '%s\n' '$PUBKEY_CONTENT' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
 bash "$INVENTORY_SCRIPT" "$VM_NAME"
 
