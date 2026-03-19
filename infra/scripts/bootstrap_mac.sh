@@ -47,7 +47,10 @@ if [[ -n "$VM_IP" ]]; then
   ssh-keygen -R "$VM_IP" >/dev/null 2>&1 || true
 fi
 
-ansible-playbook -i "$ANSIBLE_DIR/inventory/hosts.yml" "$ANSIBLE_DIR/playbooks/site.yml"
+pushd "$ANSIBLE_DIR" >/dev/null
+export ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg"
+ansible-playbook -i inventory/hosts.yml playbooks/site.yml
+popd >/dev/null
 
 cat <<EOF
 
