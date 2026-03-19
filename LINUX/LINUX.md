@@ -25,20 +25,35 @@ cd ~/Projects/safe
 bash LINUX/install.sh
 ```
 
-This installs:
+This installs local control-plane requirements for working against a remote Ubuntu host:
 
-- `git`
-- `curl`
+- `ansible`
 - `jq`
-- `ripgrep`
+- `openssh-client`
 - `python3`
 - `python3-pip`
-- `ansible`
-- `docker.io`
-- `docker-compose-v2`
-- `golang-go`
-- `nodejs`
-- `npm`
+- `ripgrep`
+
+## Remote Bootstrap
+
+Once a DigitalOcean droplet or other Ubuntu host exists, bootstrap it from the control-plane machine:
+
+```bash
+cd ~/Projects/safe
+TARGET_HOST=<droplet-ip> \
+TARGET_USER=root \
+SSH_KEY=$HOME/.ssh/id_ed25519 \
+bash LINUX/bootstrap_remote.sh
+```
+
+What this does:
+
+- copies the checked-in `safe` control repo to `/opt/safe-control` on the remote host
+- renders host-side runtime credentials from `~/.keys/safe` into `/srv/safe-secrets/agent.env`
+- writes a local Ansible inventory for the remote host
+- runs the same `safe` Ansible roles used for the local Multipass path
+
+After that, the remote host should have the same guest-side helper model as `safevm`.
 
 ## Safe Model On A Remote Linux Host
 
@@ -50,8 +65,9 @@ This installs:
 ## Suggested Flow
 
 ```bash
-sudo /usr/local/bin/safe-clone-fork <fork-url> socialpredict
+sudo /usr/local/bin/safe-clone-fork <fork-url> socialpredict <upstream-url>
 sudo /usr/local/bin/safe-start-runner
+sudo /usr/local/bin/safe-init-runner-auth
 sudo /usr/local/bin/safe-enter-fork socialpredict
 ```
 

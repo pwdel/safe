@@ -50,6 +50,7 @@ Still incomplete:
 - Add stronger runtime guardrails around shell behavior
 - Decide how much outbound network access to allow
 - Finish the Linux / DigitalOcean provisioning path
+- Add Terraform scaffolding for DigitalOcean resource creation
 - Fully document the final operating procedure in the main README
 
 ## Checklist
@@ -67,7 +68,8 @@ Still incomplete:
 - [x] Add VM reset / rebuild scripts
 - [x] Add stronger runtime guardrails around risky shell behavior
 - [x] Decide and implement the outbound network policy for the VM and coding runner
-- [ ] Build the Linux host bootstrap path for remote targets such as DigitalOcean
+- [x] Build the Linux host bootstrap path for remote targets such as DigitalOcean droplets
+- [ ] Add Terraform scaffolding for DigitalOcean droplet and network resources
 - [ ] Wire a real `socialpredict` fork workflow through the hardened runner
 - [ ] Add a documented workflow for app validation containers launched from the VM layer
 - [ ] Review whether any additional artifacts should be gitignored
