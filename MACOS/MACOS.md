@@ -96,6 +96,13 @@ Add Homebrew to `~/.zprofile`:
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 ```
 
+If you still use `bash`, add the same shellenv there too:
+
+```bash
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.bash_profile
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.bashrc
+```
+
 ### direnv
 
 Hook `direnv` into `zsh`:
@@ -125,6 +132,28 @@ If `envsubst` is not visible after `brew install gettext`, add:
 ```bash
 echo 'export PATH="/opt/homebrew/opt/gettext/bin:$PATH"' >> ~/.zshrc
 ```
+
+If you still use `bash`, add the same path there too:
+
+```bash
+echo 'export PATH="/opt/homebrew/opt/gettext/bin:$PATH"' >> ~/.bashrc
+```
+
+### Ansible and Multipass shell helpers
+
+These tools do not need custom environment variables, but it is useful to add stable aliases for the common `safe` workflow:
+
+```bash
+cat <<'EOF' >> ~/.zshrc
+# safe-vm-tools
+alias mp='multipass'
+alias ap='ansible-playbook'
+alias safe-bootstrap='bash "$HOME/Projects/safe/infra/scripts/bootstrap_mac.sh"'
+alias safe-vm='bash "$HOME/Projects/safe/infra/scripts/mp-shell.sh"'
+EOF
+```
+
+If you still use `bash`, add the same block to `~/.bashrc`.
 
 ## Python strategy
 
