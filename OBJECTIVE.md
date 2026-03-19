@@ -66,7 +66,7 @@ Still incomplete:
 - [x] Add disposable runner reset / teardown scripts
 - [x] Add VM reset / rebuild scripts
 - [x] Add stronger runtime guardrails around risky shell behavior
-- [ ] Decide and implement the outbound network policy for the VM and coding runner
+- [x] Decide and implement the outbound network policy for the VM and coding runner
 - [ ] Build the Linux host bootstrap path for remote targets such as DigitalOcean
 - [ ] Wire a real `socialpredict` fork workflow through the hardened runner
 - [ ] Add a documented workflow for app validation containers launched from the VM layer

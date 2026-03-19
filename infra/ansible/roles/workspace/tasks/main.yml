@@ -69,6 +69,18 @@
       cd {{ workspace_root }}/docker
       exec docker compose up -d --build
 
+- name: Create helper to start the coding runner offline
+  copy:
+    dest: /usr/local/bin/safe-start-runner-offline
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec env SAFE_RUNNER_NETWORK_MODE=none docker compose up -d --build coding
+
 - name: Create helper to stop the coding runner
   copy:
     dest: /usr/local/bin/safe-stop-runner

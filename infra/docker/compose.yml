@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    network_mode: "${SAFE_RUNNER_NETWORK_MODE:-bridge}"
     env_file:
       - /srv/safe-secrets/agent.env
     user: "10001:10001"

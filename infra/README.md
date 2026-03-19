@@ -119,6 +119,7 @@ After a successful bootstrap:
 - Docker is installed in the guest
 - helper commands exist in the guest:
   - `/usr/local/bin/safe-start-runner`
+  - `/usr/local/bin/safe-start-runner-offline`
   - `/usr/local/bin/safe-stop-runner`
   - `/usr/local/bin/safe-remove-runner`
   - `/usr/local/bin/safe-rebuild-runner`
@@ -171,6 +172,27 @@ Runtime shell guardrails are also enabled in the runner:
 - wrapped commands block a small set of high-risk operations by default
 - current wrapped commands: `rm`, `chmod`, `chown`, `dd`, `mkfs`, `fdisk`, `sfdisk`, `parted`, `mount`, `umount`
 - intentional bypass requires `SAFE_ALLOW_RISKY=1`
+
+## Network Policy
+
+The current network policy is:
+
+- VM firewall: deny incoming, allow outgoing, allow SSH
+- coding runner default: outbound network available on standard Docker bridge networking
+- coding runner optional offline mode: `safe-start-runner-offline`
+- no published ports from the coding runner
+
+This keeps the default workflow usable for:
+
+- cloning sandbox forks
+- installing dependencies
+- calling OpenAI or GitHub APIs
+
+For tasks that do not need internet access, start the runner with:
+
+```bash
+sudo /usr/local/bin/safe-start-runner-offline
+```
 
 The runner lifecycle is intentionally disposable:
 
