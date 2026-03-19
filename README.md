@@ -56,6 +56,44 @@ codex --version
 - Multipass and Ansible scaffolding for a VM -> Docker automation layer
 - macOS machine bootstrap steps consolidated from related repos under `~/Projects`
 
+## Isolation Model
+
+```text
++---------------------------+
+| macOS host                |
+| - credentials/control     |
+| - safe repo control plane |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| outer VM boundary         |
+| Multipass locally         |
+| or Linux droplet remotely |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| coding runner container   |
+| - non-root agent user     |
+| - fork workspace mounted  |
+| - Codex / Claude Code     |
++-------------+-------------+
+              |
+              +----------------------+
+              |                      |
+              v                      v
++---------------------------+  +---------------------------+
+| fork checkout             |  | app validation containers |
+| /srv/workspaces/forks     |  | docker compose on VM      |
+| sandbox Git remotes only  |  | run from VM helper scripts|
++---------------------------+  +---------------------------+
+```
+
+The design goal is to keep automated coding away from the macOS host and away from your primary checkouts. The agent edits only fork clones, runs inside a non-root container, and uses the VM as the outer containment boundary.
+
+For the detailed threat model and safety practices, see `infra/README.md`.
+
 ## Key repo-local commands
 
 ```bash

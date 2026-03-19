@@ -9,6 +9,64 @@ Target model:
 3. Docker inside the VM
 4. automated coding inside containers against writable fork clones
 
+## Isolation Layers
+
+```text
++---------------------------+
+| host control plane        |
+| macOS laptop or admin box |
+| - credentials             |
+| - safe repo               |
+| - bootstrap commands      |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| outer compute boundary    |
+| Multipass VM or droplet   |
+| - Ansible target          |
+| - Docker host             |
+| - fork storage            |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| coding runner container   |
+| - non-root agent user     |
+| - no Docker socket        |
+| - fork workspace only     |
++-------------+-------------+
+              |
+              +----------------------+
+              |                      |
+              v                      v
++---------------------------+  +---------------------------+
+| fork-only git workflow    |  | app/test containers       |
+| - sandbox remotes         |  | - launched from VM        |
+| - PR back to upstream     |  | - not from the agent      |
++---------------------------+  +---------------------------+
+```
+
+## Why The Layers Exist
+
+- The host keeps primary credentials and interactive control out of the agent's direct write path.
+- The VM or remote Linux host is the first real containment boundary if the agent or container misbehaves.
+- The coding runner container reduces the blast radius inside that VM by keeping the agent non-root and away from the Docker socket.
+- The fork-only workflow prevents the agent from writing directly to your primary checkout or primary GitHub account path.
+- App validation runs from VM-controlled helper scripts so the agent does not need Docker-in-Docker or direct control of the Docker daemon.
+
+## Safety Practices
+
+- Run the coding agent as a non-root user in the container.
+- Reserve `sudo` on the VM for explicit helper scripts you control.
+- Keep fork work under `/srv/workspaces/forks`.
+- Push only to sandbox or fork remotes.
+- Open PRs from forks back to upstream.
+- Do not mount the host checkout directly into the coding container.
+- Do not mount `/var/run/docker.sock` into the coding container.
+- Keep long-lived secrets out of shell history, dotfiles, and the guest filesystem where possible.
+- Treat the VM and coding container as disposable runtime layers.
+
 ## Design goals
 
 - keep the macOS host out of the direct write path for automated coding
