@@ -111,6 +111,7 @@ After a successful bootstrap:
   - `/usr/local/bin/safe-enter-runner`
   - `/usr/local/bin/safe-enter-fork`
   - `/usr/local/bin/safe-clone-fork`
+  - `/usr/local/bin/safe-guard-fork`
   - `/usr/local/bin/safe-run-fork-compose`
 - writable fork workspaces exist at `/srv/workspaces/forks`
 
@@ -132,6 +133,12 @@ The intended git model is:
 - open a PR from fork -> upstream
 
 This keeps the primary account and primary checkout out of the direct automation write path.
+
+The helper scripts enforce the intended structure:
+
+- `safe-clone-fork <fork-url> <target-name> [upstream-url]` clones the fork as `origin`
+- if an `upstream-url` is supplied, it is added as `upstream` with pushing disabled
+- a `pre-push` hook is installed in the checkout to block pushes to any remote except `origin`
 
 ## Container Hardening
 

@@ -96,18 +96,101 @@
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
-      if [[ $# -ne 2 ]]; then
-        echo "Usage: safe-clone-fork <git-url> <target-name>" >&2
+      if [[ $# -lt 2 || $# -gt 3 ]]; then
+        echo "Usage: safe-clone-fork <fork-git-url> <target-name> [upstream-git-url]" >&2
         exit 1
       fi
-      url="$1"
+      fork_url="$1"
       name="$2"
+      upstream_url="${3:-}"
       dest="{{ fork_root }}/$name"
       if [[ -e "$dest" ]]; then
         echo "Destination already exists: $dest" >&2
         exit 1
       fi
-      git clone "$url" "$dest"
+      git clone "$fork_url" "$dest"
+      cd "$dest"
+      git config remote.pushDefault origin
+      if [[ -n "$upstream_url" ]]; then
+        git remote add upstream "$upstream_url"
+        git remote set-url --push upstream DISABLED
+        if [[ "$(git remote get-url origin)" == "$(git remote get-url upstream)" ]]; then
+          echo "Origin and upstream must not be the same URL." >&2
+          exit 1
+        fi
+      fi
+      hook_dir=".git/hooks"
+      mkdir -p "$hook_dir"
+      cat >"$hook_dir/pre-push" <<'EOF'
+      #!/usr/bin/env bash
+      set -euo pipefail
+      remote_name="${1:-}"
+      if [[ "$remote_name" != "origin" ]]; then
+        echo "Push blocked: only the origin remote may be used from this fork checkout." >&2
+        exit 1
+      fi
+      if git remote get-url upstream >/dev/null 2>&1; then
+        origin_url="$(git remote get-url origin)"
+        upstream_url="$(git remote get-url upstream)"
+        if [[ "$origin_url" == "$upstream_url" ]]; then
+          echo "Push blocked: origin and upstream point to the same repository." >&2
+          exit 1
+        fi
+      fi
+      EOF
+      chmod 0755 "$hook_dir/pre-push"
+      chown -R {{ admin_user }}:{{ admin_user }} "$dest"
+
+- name: Create helper to guard an existing fork checkout
+  copy:
+    dest: /usr/local/bin/safe-guard-fork
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ $# -lt 1 || $# -gt 2 ]]; then
+        echo "Usage: safe-guard-fork <target-name> [upstream-git-url]" >&2
+        exit 1
+      fi
+      name="$1"
+      upstream_url="${2:-}"
+      dest="{{ fork_root }}/$name"
+      if [[ ! -d "$dest/.git" ]]; then
+        echo "Fork checkout not found: $dest" >&2
+        exit 1
+      fi
+      cd "$dest"
+      git config remote.pushDefault origin
+      if [[ -n "$upstream_url" ]]; then
+        if git remote get-url upstream >/dev/null 2>&1; then
+          git remote set-url upstream "$upstream_url"
+        else
+          git remote add upstream "$upstream_url"
+        fi
+        git remote set-url --push upstream DISABLED
+      fi
+      hook_dir=".git/hooks"
+      mkdir -p "$hook_dir"
+      cat >"$hook_dir/pre-push" <<'EOF'
+      #!/usr/bin/env bash
+      set -euo pipefail
+      remote_name="${1:-}"
+      if [[ "$remote_name" != "origin" ]]; then
+        echo "Push blocked: only the origin remote may be used from this fork checkout." >&2
+        exit 1
+      fi
+      if git remote get-url upstream >/dev/null 2>&1; then
+        origin_url="$(git remote get-url origin)"
+        upstream_url="$(git remote get-url upstream)"
+        if [[ "$origin_url" == "$upstream_url" ]]; then
+          echo "Push blocked: origin and upstream point to the same repository." >&2
+          exit 1
+        fi
+      fi
+      EOF
+      chmod 0755 "$hook_dir/pre-push"
       chown -R {{ admin_user }}:{{ admin_user }} "$dest"
 
 - name: Create helper to run app containers from a fork on the VM
