@@ -108,6 +108,10 @@ After a successful bootstrap:
 - Docker is installed in the guest
 - helper commands exist in the guest:
   - `/usr/local/bin/safe-start-runner`
+  - `/usr/local/bin/safe-stop-runner`
+  - `/usr/local/bin/safe-remove-runner`
+  - `/usr/local/bin/safe-rebuild-runner`
+  - `/usr/local/bin/safe-runner-status`
   - `/usr/local/bin/safe-init-runner-auth`
   - `/usr/local/bin/safe-enter-runner`
   - `/usr/local/bin/safe-enter-fork`
@@ -150,6 +154,13 @@ The coding runner is intended to:
 - use `no-new-privileges`
 - avoid access to the Docker socket
 - mount only the fork workspace, not the whole VM filesystem
+
+The runner lifecycle is intentionally disposable:
+
+- `safe-stop-runner` stops the coding container
+- `safe-remove-runner` removes the coding container without deleting fork data
+- `safe-rebuild-runner` recreates the container from the current image definition
+- `safe-runner-status` shows current runner status
 
 ## Runtime Credentials
 

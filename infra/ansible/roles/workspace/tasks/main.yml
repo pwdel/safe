@@ -69,6 +69,56 @@
       cd {{ workspace_root }}/docker
       exec docker compose up -d --build
 
+- name: Create helper to stop the coding runner
+  copy:
+    dest: /usr/local/bin/safe-stop-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose stop coding
+
+- name: Create helper to remove the coding runner container
+  copy:
+    dest: /usr/local/bin/safe-remove-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose rm -f -s coding
+
+- name: Create helper to rebuild the coding runner from scratch
+  copy:
+    dest: /usr/local/bin/safe-rebuild-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      docker compose stop coding || true
+      docker compose rm -f -s coding || true
+      exec docker compose up -d --build coding
+
+- name: Create helper to inspect coding runner status
+  copy:
+    dest: /usr/local/bin/safe-runner-status
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose ps
+
 - name: Create helper to open shell in coding container
   copy:
     dest: /usr/local/bin/safe-enter-runner

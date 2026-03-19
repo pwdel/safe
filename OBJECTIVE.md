@@ -64,7 +64,7 @@ Still incomplete:
 - [x] Enforce fork-only git remotes and sandbox-only push targets
 - [x] Define how sandbox GitHub credentials are injected into the runtime
 - [x] Define how Codex / OpenAI auth is injected into the runtime without leaving broad secrets behind
-- [ ] Add disposable runner reset / teardown scripts
+- [x] Add disposable runner reset / teardown scripts
 - [ ] Add VM reset / rebuild scripts
 - [ ] Add stronger runtime guardrails around risky shell behavior
 - [ ] Decide and implement the outbound network policy for the VM and coding runner
