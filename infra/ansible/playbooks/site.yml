@@ -1,0 +1,7 @@
+---
+- hosts: safevm
+  become: true
+  roles:
+    - baseline
+    - users
+    - workspace

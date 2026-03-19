@@ -10,3 +10,5 @@
 !.opencode/plugins/guardrails.js
 
 .opencode-runtime/
+
+.vagrant/

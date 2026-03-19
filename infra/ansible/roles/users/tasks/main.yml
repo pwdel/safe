@@ -1,0 +1,14 @@
+---
+- name: Create admin user with sudo
+  user:
+    name: "{{ admin_user }}"
+    groups: sudo,docker
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Create review user without sudo or docker
+  user:
+    name: "{{ safe_user }}"
+    shell: /bin/bash
+    create_home: true

@@ -1,0 +1,84 @@
+---
+- name: Create workspace root
+  file:
+    path: "{{ workspace_root }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+
+- name: Create fork workspace root
+  file:
+    path: "{{ fork_root }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+
+- name: Create docker config directory
+  file:
+    path: "{{ workspace_root }}/docker"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+
+- name: Copy docker compose file
+  copy:
+    src: "{{ app_root }}/infra/docker/compose.yml"
+    dest: "{{ workspace_root }}/docker/compose.yml"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+
+- name: Copy docker runner Dockerfile
+  copy:
+    src: "{{ app_root }}/infra/docker/coding-runner/Dockerfile"
+    dest: "{{ workspace_root }}/docker/Dockerfile"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+
+- name: Create operator helper script
+  copy:
+    dest: /usr/local/bin/safe-start-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose up -d --build
+
+- name: Create fork clone helper script
+  copy:
+    dest: /usr/local/bin/safe-clone-fork
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ $# -ne 2 ]]; then
+        echo "Usage: safe-clone-fork <git-url> <target-name>" >&2
+        exit 1
+      fi
+      url="$1"
+      name="$2"
+      dest="{{ fork_root }}/$name"
+      if [[ -e "$dest" ]]; then
+        echo "Destination already exists: $dest" >&2
+        exit 1
+      fi
+      git clone "$url" "$dest"
+      chown -R {{ admin_user }}:{{ admin_user }} "$dest"
+
+- name: Ensure review user cannot write fork root
+  file:
+    path: "{{ fork_root }}"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
