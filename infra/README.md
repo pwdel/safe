@@ -166,6 +166,12 @@ The coding runner is intended to:
 - avoid access to the Docker socket
 - mount only the fork workspace, not the whole VM filesystem
 
+Runtime shell guardrails are also enabled in the runner:
+
+- wrapped commands block a small set of high-risk operations by default
+- current wrapped commands: `rm`, `chmod`, `chown`, `dd`, `mkfs`, `fdisk`, `sfdisk`, `parted`, `mount`, `umount`
+- intentional bypass requires `SAFE_ALLOW_RISKY=1`
+
 The runner lifecycle is intentionally disposable:
 
 - `safe-stop-runner` stops the coding container

@@ -1,0 +1,13 @@
+export SAFE_GUARD_ACTIVE=1
+
+safe_guard_notice() {
+  cat <<'EOF'
+safe runner guardrails active
+- wrapped commands: rm chmod chown dd mkfs fdisk sfdisk parted mount umount
+- bypass only when intentional: export SAFE_ALLOW_RISKY=1
+EOF
+}
+
+if [[ -n "${PS1:-}" ]]; then
+  safe_guard_notice
+fi
