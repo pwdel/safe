@@ -17,10 +17,14 @@ REPO_ROOT="$(cd "$INFRA_DIR/.." && pwd)"
 ANSIBLE_DIR="$INFRA_DIR/ansible"
 INVENTORY_SCRIPT="$ANSIBLE_DIR/scripts/gen_inventory_from_multipass.sh"
 ARCHIVE_PATH="$(mktemp /tmp/safe-bootstrap.XXXXXX.tar.gz)"
+AGENT_ENV_PATH="$(mktemp /tmp/safe-agent-env.XXXXXX)"
 SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY:-$HOME/.ssh/id_ed25519.pub}"
+HOST_KEYS_DIR="${HOST_KEYS_DIR:-$HOME/.keys/safe}"
+RENDER_AGENT_ENV="$INFRA_DIR/scripts/render_host_agent_env.sh"
 
 cleanup() {
   rm -f "$ARCHIVE_PATH"
+  rm -f "$AGENT_ENV_PATH"
 }
 
 trap cleanup EXIT
@@ -41,6 +45,13 @@ require_cmd tar
 if [[ ! -f "$SSH_PUBLIC_KEY" ]]; then
   echo "SSH public key not found: $SSH_PUBLIC_KEY" >&2
   exit 1
+fi
+
+if [[ -d "$HOST_KEYS_DIR" ]]; then
+  OUTPUT="$AGENT_ENV_PATH" HOST_KEYS_DIR="$HOST_KEYS_DIR" bash "$RENDER_AGENT_ENV" >/dev/null
+else
+  : >"$AGENT_ENV_PATH"
+  chmod 0600 "$AGENT_ENV_PATH"
 fi
 
 if ! multipass info "$VM_NAME" >/dev/null 2>&1; then
@@ -64,6 +75,8 @@ multipass exec "$VM_NAME" -- bash -lc 'rm -rf /tmp/safe-control /tmp/safe-contro
 multipass transfer "$ARCHIVE_PATH" "$VM_NAME":/tmp/safe-control.tgz
 multipass exec "$VM_NAME" -- bash -lc 'tar -xzf /tmp/safe-control.tgz -C /tmp/safe-control'
 multipass exec "$VM_NAME" -- sudo bash -lc 'cp -a /tmp/safe-control/. /opt/safe-control/'
+multipass transfer "$AGENT_ENV_PATH" "$VM_NAME":/tmp/agent.env
+multipass exec "$VM_NAME" -- sudo bash -lc 'mkdir -p /srv/safe-secrets && install -m 0600 -o operator -g operator /tmp/agent.env /srv/safe-secrets/agent.env'
 PUBKEY_CONTENT="$(cat "$SSH_PUBLIC_KEY")"
 multipass exec "$VM_NAME" -- bash -lc "mkdir -p ~/.ssh && chmod 700 ~/.ssh && grep -qxF '$PUBKEY_CONTENT' ~/.ssh/authorized_keys 2>/dev/null || printf '%s\n' '$PUBKEY_CONTENT' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 

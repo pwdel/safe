@@ -62,8 +62,8 @@ Still incomplete:
 - [x] Keep generated inventory and local Ansible state out of git
 - [x] Document the current isolation model and threat rationale
 - [x] Enforce fork-only git remotes and sandbox-only push targets
-- [ ] Define how sandbox GitHub credentials are injected into the runtime
-- [ ] Define how Codex / OpenAI auth is injected into the runtime without leaving broad secrets behind
+- [x] Define how sandbox GitHub credentials are injected into the runtime
+- [x] Define how Codex / OpenAI auth is injected into the runtime without leaving broad secrets behind
 - [ ] Add disposable runner reset / teardown scripts
 - [ ] Add VM reset / rebuild scripts
 - [ ] Add stronger runtime guardrails around risky shell behavior

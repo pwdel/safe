@@ -108,6 +108,7 @@ After a successful bootstrap:
 - Docker is installed in the guest
 - helper commands exist in the guest:
   - `/usr/local/bin/safe-start-runner`
+  - `/usr/local/bin/safe-init-runner-auth`
   - `/usr/local/bin/safe-enter-runner`
   - `/usr/local/bin/safe-enter-fork`
   - `/usr/local/bin/safe-clone-fork`
@@ -149,3 +150,25 @@ The coding runner is intended to:
 - use `no-new-privileges`
 - avoid access to the Docker socket
 - mount only the fork workspace, not the whole VM filesystem
+
+## Runtime Credentials
+
+Host-side runtime credentials are expected under `~/.keys/safe` and are copied into the guest during bootstrap.
+
+Supported host files:
+
+- `~/.keys/safe/github.env`
+- `~/.keys/safe/openai.env`
+- or a combined `~/.keys/safe/agent.env`
+
+Those files are rendered into:
+
+- guest path: `/srv/safe-secrets/agent.env`
+- container path: environment variables loaded through Docker Compose `env_file`
+
+The intended values are:
+
+- `GITHUB_TOKEN` or `GH_TOKEN` for sandbox GitHub access
+- `OPENAI_API_KEY` for Codex / OpenAI runtime access
+
+The helper `safe-init-runner-auth` initializes GitHub CLI auth inside the coding runner from those injected environment variables.

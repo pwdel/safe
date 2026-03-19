@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - /srv/safe-secrets/agent.env
     user: "10001:10001"
     working_dir: /workspace
     stdin_open: true

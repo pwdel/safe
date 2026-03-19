@@ -15,6 +15,22 @@
     group: "{{ admin_user }}"
     mode: "0755"
 
+- name: Create runtime secrets root
+  file:
+    path: "{{ secrets_root }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0700"
+
+- name: Ensure runtime agent env file exists
+  file:
+    path: "{{ secrets_root }}/agent.env"
+    state: touch
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0600"
+
 - name: Create docker config directory
   file:
     path: "{{ workspace_root }}/docker"
@@ -64,6 +80,18 @@
       set -euo pipefail
       cd {{ workspace_root }}/docker
       exec docker compose exec coding bash
+
+- name: Create helper to initialize runner auth from mounted runtime env
+  copy:
+    dest: /usr/local/bin/safe-init-runner-auth
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose exec coding safe-init-auth
 
 - name: Create helper to open shell in coding container at a fork path
   copy:
