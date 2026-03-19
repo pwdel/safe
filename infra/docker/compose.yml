@@ -3,9 +3,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    user: "10001:10001"
     working_dir: /workspace
     stdin_open: true
     tty: true
     command: ["sleep", "infinity"]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+      - /run
+    pids_limit: 512
     volumes:
       - /srv/workspaces/forks:/workspace

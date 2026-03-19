@@ -11,6 +11,7 @@ This repo is intentionally checked in as a project so the setup can be versioned
 
 - For the consolidated machine setup guide, read `MACOS/MACOS.md`
 - For the one-shot macOS installer, run `bash MACOS/install.sh`
+- For a remote Linux host such as DigitalOcean, read `LINUX/LINUX.md`
 - For Codex and OpenCode guardrail details, see `docs/`
 
 ## Chat runtime choice

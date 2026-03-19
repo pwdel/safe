@@ -53,6 +53,40 @@
       cd {{ workspace_root }}/docker
       exec docker compose up -d --build
 
+- name: Create helper to open shell in coding container
+  copy:
+    dest: /usr/local/bin/safe-enter-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose exec coding bash
+
+- name: Create helper to open shell in coding container at a fork path
+  copy:
+    dest: /usr/local/bin/safe-enter-fork
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ $# -ne 1 ]]; then
+        echo "Usage: safe-enter-fork <fork-name>" >&2
+        exit 1
+      fi
+      name="$1"
+      target="{{ fork_root }}/$name"
+      if [[ ! -d "$target" ]]; then
+        echo "Fork not found: $target" >&2
+        exit 1
+      fi
+      cd {{ workspace_root }}/docker
+      exec docker compose exec --workdir "/workspace/$name" coding bash
+
 - name: Create fork clone helper script
   copy:
     dest: /usr/local/bin/safe-clone-fork
@@ -75,6 +109,29 @@
       fi
       git clone "$url" "$dest"
       chown -R {{ admin_user }}:{{ admin_user }} "$dest"
+
+- name: Create helper to run app containers from a fork on the VM
+  copy:
+    dest: /usr/local/bin/safe-run-fork-compose
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ $# -lt 2 ]]; then
+        echo "Usage: safe-run-fork-compose <fork-name> <compose-args...>" >&2
+        exit 1
+      fi
+      name="$1"
+      shift
+      target="{{ fork_root }}/$name"
+      if [[ ! -d "$target" ]]; then
+        echo "Fork not found: $target" >&2
+        exit 1
+      fi
+      cd "$target"
+      exec docker compose "$@"
 
 - name: Ensure review user cannot write fork root
   file:

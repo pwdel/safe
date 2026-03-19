@@ -37,8 +37,9 @@ Important defaults:
 - `bash infra/scripts/bootstrap_mac.sh` launches Ubuntu in Multipass and applies Ansible
 - the bootstrap script seeds `~/.ssh/id_ed25519.pub` into the guest's `ubuntu` account so Ansible can connect
 - Ansible installs Docker and creates users and workspace directories
-- Docker runs a coding container against a fork cloned under `/srv/workspaces/forks`
+- Docker runs a non-root coding container against a fork cloned under `/srv/workspaces/forks`
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
+- app validation containers should be started from VM helper scripts, not from Docker-in-Docker inside the coding runner
 
 ## What Bootstrap Creates
 
@@ -49,7 +50,10 @@ After a successful bootstrap:
 - Docker is installed in the guest
 - helper commands exist in the guest:
   - `/usr/local/bin/safe-start-runner`
+  - `/usr/local/bin/safe-enter-runner`
+  - `/usr/local/bin/safe-enter-fork`
   - `/usr/local/bin/safe-clone-fork`
+  - `/usr/local/bin/safe-run-fork-compose`
 - writable fork workspaces exist at `/srv/workspaces/forks`
 
 ## Why Multipass here
@@ -70,3 +74,13 @@ The intended git model is:
 - open a PR from fork -> upstream
 
 This keeps the primary account and primary checkout out of the direct automation write path.
+
+## Container Hardening
+
+The coding runner is intended to:
+
+- run as a non-root user
+- drop Linux capabilities
+- use `no-new-privileges`
+- avoid access to the Docker socket
+- mount only the fork workspace, not the whole VM filesystem
