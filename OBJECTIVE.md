@@ -47,7 +47,6 @@ Already in place:
 Still incomplete:
 
 - Define safe runtime injection for GitHub and OpenAI credentials
-- Add disposable reset / teardown flows
 - Add stronger runtime guardrails around shell behavior
 - Decide how much outbound network access to allow
 - Finish the Linux / DigitalOcean provisioning path
@@ -65,7 +64,7 @@ Still incomplete:
 - [x] Define how sandbox GitHub credentials are injected into the runtime
 - [x] Define how Codex / OpenAI auth is injected into the runtime without leaving broad secrets behind
 - [x] Add disposable runner reset / teardown scripts
-- [ ] Add VM reset / rebuild scripts
+- [x] Add VM reset / rebuild scripts
 - [ ] Add stronger runtime guardrails around risky shell behavior
 - [ ] Decide and implement the outbound network policy for the VM and coding runner
 - [ ] Build the Linux host bootstrap path for remote targets such as DigitalOcean

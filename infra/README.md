@@ -99,6 +99,17 @@ Important defaults:
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
 - app validation containers should be started from VM helper scripts, not from Docker-in-Docker inside the coding runner
 
+## VM Lifecycle
+
+Host-side helpers exist for the outer VM boundary:
+
+- `bash infra/scripts/vm-status.sh`
+- `bash infra/scripts/vm-stop.sh`
+- `bash infra/scripts/vm-delete.sh`
+- `bash infra/scripts/vm-rebuild.sh`
+
+These are intended to make the VM itself disposable in the same way the runner container is disposable.
+
 ## What Bootstrap Creates
 
 After a successful bootstrap:
