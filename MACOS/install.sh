@@ -45,7 +45,7 @@ append_if_missing "$HOME/.zprofile" 'eval "$(/opt/homebrew/bin/brew shellenv)"'
 
 brew update
 
-brew install ansible direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
+brew install ansible multipass direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
 
 if [[ "$INSTALL_CODEX" == "1" ]]; then
   brew install --cask codex
@@ -54,10 +54,6 @@ fi
 if [[ "$INSTALL_DOCKER" == "1" ]]; then
   brew install --cask docker-desktop
 fi
-
-brew install --cask virtualbox
-brew tap hashicorp/tap
-brew install hashicorp/tap/hashicorp-vagrant
 
 append_if_missing "$HOME/.zshrc" 'eval "$(direnv hook zsh)"'
 append_if_missing "$HOME/.zshrc" 'export PATH="/opt/homebrew/opt/gettext/bin:$PATH"'
@@ -89,7 +85,7 @@ Next recommended steps:
   3. cd $PROJECTS_DIR/mlx-test && direnv allow && uv sync
   4. cd $PROJECTS_DIR/safe && bash scripts/opencode-local.sh auth login
   5. If Docker Desktop was installed, open it once before using socialpredict
-  6. Verify Ansible and Vagrant with: ansible --version && vagrant --version
+  6. Verify Ansible and Multipass with: ansible --version && multipass version
 
 Reference:
   $PROJECTS_DIR/safe/MACOS/MACOS.md

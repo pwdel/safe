@@ -56,6 +56,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 These tools cover the repos currently under `~/Projects`:
 
 - `ansible`
+- `multipass`
 - `direnv`
 - `uv`
 - `pyenv`
@@ -69,7 +70,7 @@ These tools cover the repos currently under `~/Projects`:
 Install them with:
 
 ```bash
-brew install ansible direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
+brew install ansible multipass direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
 ```
 
 ### GUI and larger tooling
@@ -78,14 +79,11 @@ These are installed as Homebrew casks:
 
 - `codex`
 - `docker-desktop`
-- `virtualbox`
 
 Install them with:
 
 ```bash
-brew install --cask codex docker-desktop virtualbox
-brew tap hashicorp/tap
-brew install hashicorp/tap/hashicorp-vagrant
+brew install --cask codex docker-desktop
 ```
 
 ## Shell configuration
@@ -192,16 +190,18 @@ bash scripts/opencode-local.sh
 
 ## VM and provisioning layer
 
-For this repo, Ansible and Vagrant are required parts of the host setup.
+For this repo, Ansible and Multipass are required parts of the host setup on macOS Apple silicon.
 
 The intended layering is:
 
 - macOS host for interactive control and credentials
-- Vagrant VM for the first containment boundary
+- Multipass VM for the first containment boundary
 - Docker inside the VM for the actual automated coding runtime
 - writable fork clones inside the VM, not directly on the macOS host
 
 This is the model we want for running Codex or Claude Code with bypassed internal permissions while still keeping containment boundaries around the work.
+
+Vagrant still belongs in the broader machine setup toolbox, but it is not the recommended `safe` implementation on Apple silicon.
 
 ## Repo-specific bootstrap steps
 
@@ -211,6 +211,7 @@ This is the model we want for running Codex or Claude Code with bypassed interna
 cd ~/Projects/safe
 direnv allow
 pre-commit install
+bash infra/scripts/bootstrap_mac.sh
 ```
 
 ### `mlx-test`
@@ -326,11 +327,10 @@ Optional environment flags:
 - `pre-commit --version`
 - `opencode --version`
 - `ansible --version`
+- `multipass version`
 - `codex --version`
 - `docker --version`
 - `docker compose version`
-- `VBoxManage --version`
-- `vagrant --version`
 
 ## Source notes
 

@@ -5,7 +5,7 @@ This directory scaffolds the layered automation environment for `safe`.
 Target model:
 
 1. macOS host
-2. Vagrant VM
+2. Multipass VM
 3. Docker inside the VM
 4. automated coding inside containers against writable fork clones
 
@@ -19,7 +19,7 @@ Target model:
 
 ## Current scaffold
 
-- `infra/vagrant/Vagrantfile`
+- `infra/multipass/`
 - `infra/ansible/`
 - `infra/docker/compose.yml`
 - `infra/docker/coding-runner/Dockerfile`
@@ -27,49 +27,24 @@ Target model:
 
 Important defaults:
 
-- the usual Vagrant `/vagrant` sync is disabled
-- the checked-in `safe/` repo is mounted read-only at `/opt/safe-control`
+- the checked-in `safe/` repo is copied into the guest at `/opt/safe-control`
 - writable coding work is expected under `/srv/workspaces/forks`
+- the macOS host remains the control plane rather than the direct automation runtime
 
 ## Current workflow intent
 
-- `vagrant up --provider=virtualbox` boots Ubuntu
+- `bash infra/scripts/bootstrap_mac.sh` launches Ubuntu in Multipass and applies Ansible
 - Ansible installs Docker and creates users and workspace directories
 - Docker runs a coding container against a fork cloned under `/srv/workspaces/forks`
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
 
-## Box selection
+## Why Multipass here
 
-Default scaffold choice:
+This repo uses Multipass as the first working macOS Apple silicon path because:
 
-- provider: `virtualbox`
-- box: `hashicorp-education/ubuntu-24-04`
-- version: `0.1.0`
-
-These defaults come from current HashiCorp Vagrant tutorials for Apple silicon with VirtualBox.
-
-You can still override them:
-
-```bash
-SAFE_VAGRANT_BOX=your-box-name \
-SAFE_VAGRANT_BOX_VERSION=your-version \
-SAFE_VAGRANT_PROVIDER=virtualbox \
-vagrant up
-```
-
-Reason for still keeping overrides available:
-
-- macOS Apple silicon support changed recently
-- provider support and available ARM boxes are still uneven
-- older Ubuntu Vagrant box names are not a reliable universal default anymore
-
-## Apple silicon note
-
-HashiCorp’s current docs note that on macOS Apple silicon you may need to unset this VirtualBox global setting before booting VMs:
-
-```bash
-VBoxManage setextradata global "VBoxInternal/Devices/pcbios/0/Config/DebugLevel"
-```
+- it maps better to the existing `sales-assist` provisioning pattern
+- it avoids the current VirtualBox friction on Apple silicon hosts
+- it still preserves the same layered security model: host -> VM -> Docker -> coding runtime
 
 ## Fork workflow
 
