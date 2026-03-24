@@ -1,3 +1,51 @@
 {
-  "$schema": "https://opencode.ai/config.json"
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "team-orchestrator",
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 20000
+  },
+  "agent": {
+    "team-orchestrator": {
+      "mode": "primary",
+      "description": "Orchestrates work across subagents and combines results.",
+      "permission": {
+        "task": {
+          "*": "deny",
+          "general": "allow",
+          "explore": "allow",
+          "team-*": "allow"
+        }
+      }
+    },
+    "team-review": {
+      "mode": "subagent",
+      "description": "Read-only reviewer focused on risks, regressions, and test gaps.",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "allow"
+      }
+    },
+    "team-implement": {
+      "mode": "subagent",
+      "description": "Implementation specialist for scoped edits and validation commands.",
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "ask",
+          "pwd": "allow",
+          "ls *": "allow",
+          "rg *": "allow",
+          "git status": "allow",
+          "git diff*": "allow"
+        },
+        "webfetch": "ask"
+      }
+    }
+  },
+  "plugin": [
+    "opencode-openai-codex-auth"
+  ]
 }

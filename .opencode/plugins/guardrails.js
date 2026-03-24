@@ -1,4 +1,68 @@
-export const GuardrailsPlugin = async () => {
+import path from "node:path"
+import { spawnSync } from "node:child_process"
+
+const SCRIPT_PATH = path.join(process.cwd(), "scripts/opencode/precompact-context.sh")
+
+async function logPlugin(client, level, message, extra = {}) {
+  if (client?.app?.log) {
+    await client.app.log({
+      body: {
+        service: "guardrails",
+        level,
+        message,
+        extra,
+      },
+    })
+    return
+  }
+
+  const details = Object.keys(extra).length ? ` ${JSON.stringify(extra)}` : ""
+  // eslint-disable-next-line no-console
+  console.log(`[guardrails:${level}] ${message}${details}`)
+}
+
+async function precompactMessages(messages, client) {
+  if (!Array.isArray(messages) || messages.length === 0) return messages
+
+  try {
+    const result = spawnSync("sh", [SCRIPT_PATH], {
+      input: JSON.stringify({ messages }),
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+    })
+    if (result.status !== 0) {
+      await logPlugin(client, "warn", "Precompact script failed", {
+        script: SCRIPT_PATH,
+        status: result.status,
+        stderr: String(result.stderr || "").slice(0, 1000),
+      })
+      return messages
+    }
+
+    const output = JSON.parse(String(result.stdout || "{}"))
+
+    if (!Array.isArray(output.messages)) {
+      await logPlugin(client, "warn", "Precompact script returned invalid payload")
+      return messages
+    }
+
+    await logPlugin(client, "info", "Precompact complete", {
+      before: messages.length,
+      after: output.messages.length,
+      removed_parts: output.stats?.removedParts ?? 0,
+      shortened_parts: output.stats?.shortenedParts ?? 0,
+    })
+
+    return output.messages
+  } catch (error) {
+    await logPlugin(client, "warn", "Precompact script execution error", {
+      error: String(error),
+    })
+    return messages
+  }
+}
+
+export const GuardrailsPlugin = async ({ client } = {}) => {
   const forbiddenShellPatterns = [
     /\brm\s+-rf\b/,
     /\bgit\s+reset\s+--hard\b/,
@@ -40,6 +104,18 @@ export const GuardrailsPlugin = async () => {
     "shell.env": async (input, output) => {
       output.env.CODEX_HOME = `${input.cwd}/.codex`
       output.env.PROJECT_ROOT = input.cwd
+    },
+
+    // Run before each model call to remove duplicate and oversized context text.
+    "experimental.chat.messages.transform": async (_input, output) => {
+      output.messages = await precompactMessages(output.messages, client)
+    },
+
+    // Runs on auto/manual compaction passes only.
+    "experimental.session.compacting": async (_input, output) => {
+      output.context.push(
+        "Deduplicate repeated decisions and commands. Keep only actionable outputs."
+      )
     },
   }
 }
