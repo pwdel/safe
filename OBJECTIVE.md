@@ -51,6 +51,7 @@ Still incomplete:
 - Decide how much outbound network access to allow
 - Finish the Linux / DigitalOcean provisioning path
 - Add Terraform scaffolding for DigitalOcean resource creation
+- Create a sandbox GitHub account for fork-only automation
 - Fully document the final operating procedure in the main README
 
 ## Checklist
@@ -70,6 +71,7 @@ Still incomplete:
 - [x] Decide and implement the outbound network policy for the VM and coding runner
 - [x] Build the Linux host bootstrap path for remote targets such as DigitalOcean droplets
 - [ ] Add Terraform scaffolding for DigitalOcean droplet and network resources
+- [ ] Human task: create a sandbox GitHub account and token for fork-only automation
 - [ ] Wire a real `socialpredict` fork workflow through the hardened runner
 - [ ] Add a documented workflow for app validation containers launched from the VM layer
 - [ ] Review whether any additional artifacts should be gitignored

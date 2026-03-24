@@ -1,5 +1,6 @@
 web_search = "disabled"
 tools.view_image = false
+model = "gpt-5.4"
 
 [features]
 shell_tool = true
@@ -7,3 +8,9 @@ multi_agent = false
 apps = false
 image_generation = false
 codex_hooks = true
+
+[projects."/Users/patrick/Projects/safe"]
+trust_level = "trusted"
+
+[notice.model_migrations]
+"gpt-5.3-codex" = "gpt-5.4"
