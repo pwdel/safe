@@ -12,3 +12,6 @@
 .opencode-runtime/
 
 .vagrant/
+
+infra/ansible/.ansible/
+infra/ansible/inventory/hosts.yml

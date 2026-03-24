@@ -18,16 +18,17 @@ This repo is intentionally checked in as a project so the setup can be versioned
 - repo-local Codex configuration under `.codex/`
 - repo-local OpenCode configuration under `opencode.json` and `.opencode/`
 - pre-commit guardrails for tracked config safety
-- Vagrant and Ansible scaffolding for a VM -> Docker automation layer
+- Multipass and Ansible scaffolding for a VM -> Docker automation layer
 - macOS machine bootstrap steps consolidated from related repos under `~/Projects`
 
 ## Key repo-local commands
 
 ```bash
 cd ~/Projects/safe
-direnv allow
 pre-commit install
 codex
 bash scripts/opencode-local.sh
-bash infra/scripts/vagrant-up.sh
+bash infra/scripts/bootstrap_mac.sh
 ```
+
+For the Multipass workflow, `direnv` is optional. It is only needed if you want the repo-local `.envrc` behavior for tools like Codex.

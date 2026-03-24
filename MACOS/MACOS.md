@@ -56,6 +56,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 These tools cover the repos currently under `~/Projects`:
 
 - `ansible`
+- `multipass`
 - `direnv`
 - `uv`
 - `pyenv`
@@ -69,7 +70,7 @@ These tools cover the repos currently under `~/Projects`:
 Install them with:
 
 ```bash
-brew install ansible direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
+brew install ansible multipass direnv uv pyenv pyenv-virtualenv pre-commit gettext tree gh opencode
 ```
 
 ### GUI and larger tooling
@@ -78,14 +79,11 @@ These are installed as Homebrew casks:
 
 - `codex`
 - `docker-desktop`
-- `virtualbox`
 
 Install them with:
 
 ```bash
-brew install --cask codex docker-desktop virtualbox
-brew tap hashicorp/tap
-brew install hashicorp/tap/hashicorp-vagrant
+brew install --cask codex docker-desktop
 ```
 
 ## Shell configuration
@@ -96,6 +94,13 @@ Add Homebrew to `~/.zprofile`:
 
 ```bash
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+```
+
+If you still use `bash`, add the same shellenv there too:
+
+```bash
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.bash_profile
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.bashrc
 ```
 
 ### direnv
@@ -127,6 +132,28 @@ If `envsubst` is not visible after `brew install gettext`, add:
 ```bash
 echo 'export PATH="/opt/homebrew/opt/gettext/bin:$PATH"' >> ~/.zshrc
 ```
+
+If you still use `bash`, add the same path there too:
+
+```bash
+echo 'export PATH="/opt/homebrew/opt/gettext/bin:$PATH"' >> ~/.bashrc
+```
+
+### Ansible and Multipass shell helpers
+
+These tools do not need custom environment variables, but it is useful to add stable aliases for the common `safe` workflow:
+
+```bash
+cat <<'EOF' >> ~/.zshrc
+# safe-vm-tools
+alias mp='multipass'
+alias ap='ansible-playbook'
+alias safe-bootstrap='bash "$HOME/Projects/safe/infra/scripts/bootstrap_mac.sh"'
+alias safe-vm='bash "$HOME/Projects/safe/infra/scripts/mp-shell.sh"'
+EOF
+```
+
+If you still use `bash`, add the same block to `~/.bashrc`.
 
 ## Python strategy
 
@@ -192,16 +219,18 @@ bash scripts/opencode-local.sh
 
 ## VM and provisioning layer
 
-For this repo, Ansible and Vagrant are required parts of the host setup.
+For this repo, Ansible and Multipass are required parts of the host setup on macOS Apple silicon.
 
 The intended layering is:
 
 - macOS host for interactive control and credentials
-- Vagrant VM for the first containment boundary
+- Multipass VM for the first containment boundary
 - Docker inside the VM for the actual automated coding runtime
 - writable fork clones inside the VM, not directly on the macOS host
 
 This is the model we want for running Codex or Claude Code with bypassed internal permissions while still keeping containment boundaries around the work.
+
+Vagrant still belongs in the broader machine setup toolbox, but it is not the recommended `safe` implementation on Apple silicon.
 
 ## Repo-specific bootstrap steps
 
@@ -209,9 +238,15 @@ This is the model we want for running Codex or Claude Code with bypassed interna
 
 ```bash
 cd ~/Projects/safe
-direnv allow
 pre-commit install
+bash infra/scripts/bootstrap_mac.sh
 ```
+
+Notes:
+
+- `direnv allow` is optional for VM bootstrap; it is only needed if you want repo-local environment overrides such as `CODEX_HOME`
+- `bash infra/scripts/bootstrap_mac.sh` creates or starts the Multipass instance `safevm`, copies the control repo into the guest, writes `infra/ansible/inventory/hosts.yml`, seeds your `~/.ssh/id_ed25519.pub` into the guest, and runs Ansible provisioning
+- `bash infra/scripts/mp-shell.sh` opens a shell in the guest after bootstrap
 
 ### `mlx-test`
 
@@ -326,11 +361,10 @@ Optional environment flags:
 - `pre-commit --version`
 - `opencode --version`
 - `ansible --version`
+- `multipass version`
 - `codex --version`
 - `docker --version`
 - `docker compose version`
-- `VBoxManage --version`
-- `vagrant --version`
 
 ## Source notes
 

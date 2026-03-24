@@ -1,6 +1,8 @@
 ---
 - hosts: safevm
   become: true
+  vars_files:
+    - ../group_vars/all.yml
   roles:
     - baseline
     - users
