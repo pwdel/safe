@@ -13,6 +13,40 @@ This repo is intentionally checked in as a project so the setup can be versioned
 - For the one-shot macOS installer, run `bash MACOS/install.sh`
 - For Codex and OpenCode guardrail details, see `docs/`
 
+## Chat runtime choice
+
+- Use `opencode` as the primary ChatGPT runtime for this repo.
+- Reason: this repo now uses OpenCode hooks to pre-compact context on every model call (`experimental.chat.messages.transform`).
+- Keep `codex` installed as a fallback for simpler sessions without custom pre-send compaction.
+
+## Agent teams
+
+- `opencode.json` now sets `default_agent` to `team-orchestrator`.
+- Team subagents are configured as `team-review` and `team-implement` under `agent`.
+- The orchestrator is allowed to delegate via `permission.task` to `general`, `explore`, and `team-*`.
+
+Quick checks:
+
+```bash
+opencode debug agent team-orchestrator
+opencode debug agent team-review
+opencode debug agent team-implement
+```
+
+## Required installs for this repo
+
+- `opencode` CLI
+- OpenCode plugin package: `opencode-openai-codex-auth`
+- `codex` CLI (recommended fallback)
+- `direnv` (optional, only if using repo-local `.envrc`)
+
+Quick check:
+
+```bash
+opencode --version
+codex --version
+```
+
 ## Included setup areas
 
 - repo-local Codex configuration under `.codex/`
