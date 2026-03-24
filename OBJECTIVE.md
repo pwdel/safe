@@ -46,7 +46,13 @@ Already in place:
 
 Still incomplete:
 
+- Create a new repo that serves as the source of truth for the auto-coding environment pulled into `safe` runtimes
 - Define safe runtime injection for GitHub and OpenAI credentials
+- Ensure the VM can install Docker and build, pull, and run the coding image reliably
+- Define the machine setup performed inside the coding image, including Codex, Claude, OpenCode, Go, and required Go tools
+- Validate that pulling code from within the VM works from inside the Docker container
+- Validate authentication from inside the container to Codex, Claude, and OpenCode against the chosen models
+- Ensure hooks, agents, skills, and the full auto-coding environment can be installed and activated inside the container
 - Add stronger runtime guardrails around shell behavior
 - Decide how much outbound network access to allow
 - Finish the Linux / DigitalOcean provisioning path
@@ -59,6 +65,7 @@ Still incomplete:
 
 - [x] Bootstrap a working macOS -> Multipass -> Docker flow for `safe`
 - [x] Get Ansible provisioning working reliably against `safevm`
+- [ ] Create a new repo for the reusable auto-coding environment
 - [x] Make the coding runner non-root
 - [x] Add baseline container hardening
 - [x] Keep generated inventory and local Ansible state out of git
@@ -66,6 +73,11 @@ Still incomplete:
 - [x] Enforce fork-only git remotes and sandbox-only push targets
 - [x] Define how sandbox GitHub credentials are injected into the runtime
 - [x] Define how Codex / OpenAI auth is injected into the runtime without leaving broad secrets behind
+- [ ] Ensure the VM can install Docker and reliably build, pull, and start the coding image
+- [ ] Define and automate the machine setup inside the coding image for Codex, Claude, OpenCode, Go, and required Go tools
+- [ ] Validate pull operations from inside the VM-hosted Docker container
+- [ ] Validate container auth flows for Codex, Claude, and OpenCode against the chosen models
+- [ ] Ensure hooks, agents, skills, and the full auto-coding environment can be installed and activated inside the container
 - [x] Add disposable runner reset / teardown scripts
 - [x] Add VM reset / rebuild scripts
 - [x] Add stronger runtime guardrails around risky shell behavior
