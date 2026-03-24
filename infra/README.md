@@ -9,6 +9,64 @@ Target model:
 3. Docker inside the VM
 4. automated coding inside containers against writable fork clones
 
+## Isolation Layers
+
+```text
++---------------------------+
+| host control plane        |
+| macOS laptop or admin box |
+| - credentials             |
+| - safe repo               |
+| - bootstrap commands      |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| outer compute boundary    |
+| Multipass VM or droplet   |
+| - Ansible target          |
+| - Docker host             |
+| - fork storage            |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| coding runner container   |
+| - non-root agent user     |
+| - no Docker socket        |
+| - fork workspace only     |
++-------------+-------------+
+              |
+              +----------------------+
+              |                      |
+              v                      v
++---------------------------+  +---------------------------+
+| fork-only git workflow    |  | app/test containers       |
+| - sandbox remotes         |  | - launched from VM        |
+| - PR back to upstream     |  | - not from the agent      |
++---------------------------+  +---------------------------+
+```
+
+## Why The Layers Exist
+
+- The host keeps primary credentials and interactive control out of the agent's direct write path.
+- The VM or remote Linux host is the first real containment boundary if the agent or container misbehaves.
+- The coding runner container reduces the blast radius inside that VM by keeping the agent non-root and away from the Docker socket.
+- The fork-only workflow prevents the agent from writing directly to your primary checkout or primary GitHub account path.
+- App validation runs from VM-controlled helper scripts so the agent does not need Docker-in-Docker or direct control of the Docker daemon.
+
+## Safety Practices
+
+- Run the coding agent as a non-root user in the container.
+- Reserve `sudo` on the VM for explicit helper scripts you control.
+- Keep fork work under `/srv/workspaces/forks`.
+- Push only to sandbox or fork remotes.
+- Open PRs from forks back to upstream.
+- Do not mount the host checkout directly into the coding container.
+- Do not mount `/var/run/docker.sock` into the coding container.
+- Keep long-lived secrets out of shell history, dotfiles, and the guest filesystem where possible.
+- Treat the VM and coding container as disposable runtime layers.
+
 ## Design goals
 
 - keep the macOS host out of the direct write path for automated coding
@@ -37,8 +95,20 @@ Important defaults:
 - `bash infra/scripts/bootstrap_mac.sh` launches Ubuntu in Multipass and applies Ansible
 - the bootstrap script seeds `~/.ssh/id_ed25519.pub` into the guest's `ubuntu` account so Ansible can connect
 - Ansible installs Docker and creates users and workspace directories
-- Docker runs a coding container against a fork cloned under `/srv/workspaces/forks`
+- Docker runs a non-root coding container against a fork cloned under `/srv/workspaces/forks`
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
+- app validation containers should be started from VM helper scripts, not from Docker-in-Docker inside the coding runner
+
+## VM Lifecycle
+
+Host-side helpers exist for the outer VM boundary:
+
+- `bash infra/scripts/vm-status.sh`
+- `bash infra/scripts/vm-stop.sh`
+- `bash infra/scripts/vm-delete.sh`
+- `bash infra/scripts/vm-rebuild.sh`
+
+These are intended to make the VM itself disposable in the same way the runner container is disposable.
 
 ## What Bootstrap Creates
 
@@ -49,7 +119,17 @@ After a successful bootstrap:
 - Docker is installed in the guest
 - helper commands exist in the guest:
   - `/usr/local/bin/safe-start-runner`
+  - `/usr/local/bin/safe-start-runner-offline`
+  - `/usr/local/bin/safe-stop-runner`
+  - `/usr/local/bin/safe-remove-runner`
+  - `/usr/local/bin/safe-rebuild-runner`
+  - `/usr/local/bin/safe-runner-status`
+  - `/usr/local/bin/safe-init-runner-auth`
+  - `/usr/local/bin/safe-enter-runner`
+  - `/usr/local/bin/safe-enter-fork`
   - `/usr/local/bin/safe-clone-fork`
+  - `/usr/local/bin/safe-guard-fork`
+  - `/usr/local/bin/safe-run-fork-compose`
 - writable fork workspaces exist at `/srv/workspaces/forks`
 
 ## Why Multipass here
@@ -70,3 +150,75 @@ The intended git model is:
 - open a PR from fork -> upstream
 
 This keeps the primary account and primary checkout out of the direct automation write path.
+
+The helper scripts enforce the intended structure:
+
+- `safe-clone-fork <fork-url> <target-name> [upstream-url]` clones the fork as `origin`
+- if an `upstream-url` is supplied, it is added as `upstream` with pushing disabled
+- a `pre-push` hook is installed in the checkout to block pushes to any remote except `origin`
+
+## Container Hardening
+
+The coding runner is intended to:
+
+- run as a non-root user
+- drop Linux capabilities
+- use `no-new-privileges`
+- avoid access to the Docker socket
+- mount only the fork workspace, not the whole VM filesystem
+
+Runtime shell guardrails are also enabled in the runner:
+
+- wrapped commands block a small set of high-risk operations by default
+- current wrapped commands: `rm`, `chmod`, `chown`, `dd`, `mkfs`, `fdisk`, `sfdisk`, `parted`, `mount`, `umount`
+- intentional bypass requires `SAFE_ALLOW_RISKY=1`
+
+## Network Policy
+
+The current network policy is:
+
+- VM firewall: deny incoming, allow outgoing, allow SSH
+- coding runner default: outbound network available on standard Docker bridge networking
+- coding runner optional offline mode: `safe-start-runner-offline`
+- no published ports from the coding runner
+
+This keeps the default workflow usable for:
+
+- cloning sandbox forks
+- installing dependencies
+- calling OpenAI or GitHub APIs
+
+For tasks that do not need internet access, start the runner with:
+
+```bash
+sudo /usr/local/bin/safe-start-runner-offline
+```
+
+The runner lifecycle is intentionally disposable:
+
+- `safe-stop-runner` stops the coding container
+- `safe-remove-runner` removes the coding container without deleting fork data
+- `safe-rebuild-runner` recreates the container from the current image definition
+- `safe-runner-status` shows current runner status
+
+## Runtime Credentials
+
+Host-side runtime credentials are expected under `~/.keys/safe` and are copied into the guest during bootstrap.
+
+Supported host files:
+
+- `~/.keys/safe/github.env`
+- `~/.keys/safe/openai.env`
+- or a combined `~/.keys/safe/agent.env`
+
+Those files are rendered into:
+
+- guest path: `/srv/safe-secrets/agent.env`
+- container path: environment variables loaded through Docker Compose `env_file`
+
+The intended values are:
+
+- `GITHUB_TOKEN` or `GH_TOKEN` for sandbox GitHub access
+- `OPENAI_API_KEY` for Codex / OpenAI runtime access
+
+The helper `safe-init-runner-auth` initializes GitHub CLI auth inside the coding runner from those injected environment variables.

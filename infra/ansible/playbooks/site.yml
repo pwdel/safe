@@ -1,5 +1,5 @@
 ---
-- hosts: safevm
+- hosts: all
   become: true
   vars_files:
     - ../group_vars/all.yml

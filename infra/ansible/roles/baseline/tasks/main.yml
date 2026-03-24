@@ -17,6 +17,7 @@
       - python3-pip
       - docker.io
       - docker-compose-v2
+      - ufw
     state: present
 
 - name: Ensure docker is enabled and started
@@ -24,3 +25,22 @@
     name: docker
     state: started
     enabled: true
+
+- name: Allow OpenSSH through firewall
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: Set default incoming firewall policy to deny
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: Set default outgoing firewall policy to allow
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Enable firewall
+  community.general.ufw:
+    state: enabled

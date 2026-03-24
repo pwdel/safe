@@ -15,6 +15,22 @@
     group: "{{ admin_user }}"
     mode: "0755"
 
+- name: Create runtime secrets root
+  file:
+    path: "{{ secrets_root }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0700"
+
+- name: Ensure runtime agent env file exists
+  file:
+    path: "{{ secrets_root }}/agent.env"
+    state: touch
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0600"
+
 - name: Create docker config directory
   file:
     path: "{{ workspace_root }}/docker"
@@ -53,6 +69,114 @@
       cd {{ workspace_root }}/docker
       exec docker compose up -d --build
 
+- name: Create helper to start the coding runner offline
+  copy:
+    dest: /usr/local/bin/safe-start-runner-offline
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec env SAFE_RUNNER_NETWORK_MODE=none docker compose up -d --build coding
+
+- name: Create helper to stop the coding runner
+  copy:
+    dest: /usr/local/bin/safe-stop-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose stop coding
+
+- name: Create helper to remove the coding runner container
+  copy:
+    dest: /usr/local/bin/safe-remove-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose rm -f -s coding
+
+- name: Create helper to rebuild the coding runner from scratch
+  copy:
+    dest: /usr/local/bin/safe-rebuild-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      docker compose stop coding || true
+      docker compose rm -f -s coding || true
+      exec docker compose up -d --build coding
+
+- name: Create helper to inspect coding runner status
+  copy:
+    dest: /usr/local/bin/safe-runner-status
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose ps
+
+- name: Create helper to open shell in coding container
+  copy:
+    dest: /usr/local/bin/safe-enter-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose exec coding bash
+
+- name: Create helper to initialize runner auth from mounted runtime env
+  copy:
+    dest: /usr/local/bin/safe-init-runner-auth
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose exec coding safe-init-auth
+
+- name: Create helper to open shell in coding container at a fork path
+  copy:
+    dest: /usr/local/bin/safe-enter-fork
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ $# -ne 1 ]]; then
+        echo "Usage: safe-enter-fork <fork-name>" >&2
+        exit 1
+      fi
+      name="$1"
+      target="{{ fork_root }}/$name"
+      if [[ ! -d "$target" ]]; then
+        echo "Fork not found: $target" >&2
+        exit 1
+      fi
+      cd {{ workspace_root }}/docker
+      exec docker compose exec --workdir "/workspace/$name" coding bash
+
 - name: Create fork clone helper script
   copy:
     dest: /usr/local/bin/safe-clone-fork
@@ -62,19 +186,125 @@
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
-      if [[ $# -ne 2 ]]; then
-        echo "Usage: safe-clone-fork <git-url> <target-name>" >&2
+      if [[ $# -lt 2 || $# -gt 3 ]]; then
+        echo "Usage: safe-clone-fork <fork-git-url> <target-name> [upstream-git-url]" >&2
         exit 1
       fi
-      url="$1"
+      fork_url="$1"
       name="$2"
+      upstream_url="${3:-}"
       dest="{{ fork_root }}/$name"
       if [[ -e "$dest" ]]; then
         echo "Destination already exists: $dest" >&2
         exit 1
       fi
-      git clone "$url" "$dest"
+      git clone "$fork_url" "$dest"
+      cd "$dest"
+      git config remote.pushDefault origin
+      if [[ -n "$upstream_url" ]]; then
+        git remote add upstream "$upstream_url"
+        git remote set-url --push upstream DISABLED
+        if [[ "$(git remote get-url origin)" == "$(git remote get-url upstream)" ]]; then
+          echo "Origin and upstream must not be the same URL." >&2
+          exit 1
+        fi
+      fi
+      hook_dir=".git/hooks"
+      mkdir -p "$hook_dir"
+      cat >"$hook_dir/pre-push" <<'EOF'
+      #!/usr/bin/env bash
+      set -euo pipefail
+      remote_name="${1:-}"
+      if [[ "$remote_name" != "origin" ]]; then
+        echo "Push blocked: only the origin remote may be used from this fork checkout." >&2
+        exit 1
+      fi
+      if git remote get-url upstream >/dev/null 2>&1; then
+        origin_url="$(git remote get-url origin)"
+        upstream_url="$(git remote get-url upstream)"
+        if [[ "$origin_url" == "$upstream_url" ]]; then
+          echo "Push blocked: origin and upstream point to the same repository." >&2
+          exit 1
+        fi
+      fi
+      EOF
+      chmod 0755 "$hook_dir/pre-push"
       chown -R {{ admin_user }}:{{ admin_user }} "$dest"
+
+- name: Create helper to guard an existing fork checkout
+  copy:
+    dest: /usr/local/bin/safe-guard-fork
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ $# -lt 1 || $# -gt 2 ]]; then
+        echo "Usage: safe-guard-fork <target-name> [upstream-git-url]" >&2
+        exit 1
+      fi
+      name="$1"
+      upstream_url="${2:-}"
+      dest="{{ fork_root }}/$name"
+      if [[ ! -d "$dest/.git" ]]; then
+        echo "Fork checkout not found: $dest" >&2
+        exit 1
+      fi
+      cd "$dest"
+      git config remote.pushDefault origin
+      if [[ -n "$upstream_url" ]]; then
+        if git remote get-url upstream >/dev/null 2>&1; then
+          git remote set-url upstream "$upstream_url"
+        else
+          git remote add upstream "$upstream_url"
+        fi
+        git remote set-url --push upstream DISABLED
+      fi
+      hook_dir=".git/hooks"
+      mkdir -p "$hook_dir"
+      cat >"$hook_dir/pre-push" <<'EOF'
+      #!/usr/bin/env bash
+      set -euo pipefail
+      remote_name="${1:-}"
+      if [[ "$remote_name" != "origin" ]]; then
+        echo "Push blocked: only the origin remote may be used from this fork checkout." >&2
+        exit 1
+      fi
+      if git remote get-url upstream >/dev/null 2>&1; then
+        origin_url="$(git remote get-url origin)"
+        upstream_url="$(git remote get-url upstream)"
+        if [[ "$origin_url" == "$upstream_url" ]]; then
+          echo "Push blocked: origin and upstream point to the same repository." >&2
+          exit 1
+        fi
+      fi
+      EOF
+      chmod 0755 "$hook_dir/pre-push"
+      chown -R {{ admin_user }}:{{ admin_user }} "$dest"
+
+- name: Create helper to run app containers from a fork on the VM
+  copy:
+    dest: /usr/local/bin/safe-run-fork-compose
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ $# -lt 2 ]]; then
+        echo "Usage: safe-run-fork-compose <fork-name> <compose-args...>" >&2
+        exit 1
+      fi
+      name="$1"
+      shift
+      target="{{ fork_root }}/$name"
+      if [[ ! -d "$target" ]]; then
+        echo "Fork not found: $target" >&2
+        exit 1
+      fi
+      cd "$target"
+      exec docker compose "$@"
 
 - name: Ensure review user cannot write fork root
   file:

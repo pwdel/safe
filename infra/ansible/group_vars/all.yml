@@ -4,3 +4,4 @@ safe_user: reviewer
 app_root: /opt/safe-control
 workspace_root: /srv/workspaces
 fork_root: /srv/workspaces/forks
+secrets_root: /srv/safe-secrets
