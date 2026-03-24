@@ -1,9 +1,7 @@
 import path from "node:path"
-import { pathToFileURL } from "node:url"
+import { spawnSync } from "node:child_process"
 
-const SCRIPT_PATH = path.join(process.cwd(), "scripts/opencode/precompact-context.mjs")
-const SCRIPT_URL = pathToFileURL(SCRIPT_PATH).href
-let precompactModulePromise
+const SCRIPT_PATH = path.join(process.cwd(), "scripts/opencode/precompact-context.sh")
 
 async function logPlugin(client, level, message, extra = {}) {
   if (client?.app?.log) {
@@ -27,16 +25,21 @@ async function precompactMessages(messages, client) {
   if (!Array.isArray(messages) || messages.length === 0) return messages
 
   try {
-    if (!precompactModulePromise) {
-      precompactModulePromise = import(SCRIPT_URL)
-    }
-    const precompactModule = await precompactModulePromise
-    if (typeof precompactModule.compactMessages !== "function") {
-      await logPlugin(client, "warn", "Precompact script export missing", { script: SCRIPT_PATH })
+    const result = spawnSync("sh", [SCRIPT_PATH], {
+      input: JSON.stringify({ messages }),
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+    })
+    if (result.status !== 0) {
+      await logPlugin(client, "warn", "Precompact script failed", {
+        script: SCRIPT_PATH,
+        status: result.status,
+        stderr: String(result.stderr || "").slice(0, 1000),
+      })
       return messages
     }
 
-    const output = precompactModule.compactMessages(messages)
+    const output = JSON.parse(String(result.stdout || "{}"))
 
     if (!Array.isArray(output.messages)) {
       await logPlugin(client, "warn", "Precompact script returned invalid payload")
