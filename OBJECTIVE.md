@@ -52,6 +52,7 @@ Still incomplete:
 - Finish the Linux / DigitalOcean provisioning path
 - Add Terraform scaffolding for DigitalOcean resource creation
 - Create a sandbox GitHub account for fork-only automation
+- Review `MACOS/` and `LINUX/` for consolidation into `../machinesetup` and replace local setup docs with pointers where appropriate
 - Fully document the final operating procedure in the main README
 
 ## Checklist
@@ -72,6 +73,7 @@ Still incomplete:
 - [x] Build the Linux host bootstrap path for remote targets such as DigitalOcean droplets
 - [ ] Add Terraform scaffolding for DigitalOcean droplet and network resources
 - [ ] Human task: create a sandbox GitHub account and token for fork-only automation
+- [ ] Review `MACOS/` and `LINUX/` setup content for migration into `../machinesetup`
 - [ ] Wire a real `socialpredict` fork workflow through the hardened runner
 - [ ] Add a documented workflow for app validation containers launched from the VM layer
 - [ ] Review whether any additional artifacts should be gitignored

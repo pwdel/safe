@@ -1,6 +1,6 @@
 # LLM Coding Guardrail Problems and Task Plan
 
-| Problem Area | Deduplicated Problem | Task List (Methodology) |
+| Problem Area | Problem | Task List (Methodology) |
 | --- | --- | --- |
 | Context Management | Context drift in longer sessions (forgets prior constraints, repeats bad fixes) | Keep `experimental.chat.messages.transform` pre-compaction active; add pinned `CONSTRAINTS.md` injected as startup context; add a turn-level "constraint check" step in orchestrator prompt. |
 | Code Correctness | Correct-looking code with broken logic, state handling, and edge cases | Route implementation through `team-implement` and mandatory `team-review`; require test-first task decomposition; block "done" responses unless targeted tests ran and output is attached. |
