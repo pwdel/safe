@@ -46,14 +46,45 @@ SSH_KEY=$HOME/.ssh/id_ed25519 \
 bash LINUX/bootstrap_remote.sh
 ```
 
+Equivalent via unified wrapper:
+
+```bash
+cd ~/Projects/safe
+bash infra/scripts/safectl.sh --host <droplet-ip> remote bootstrap
+```
+
+Optional preflight before bootstrap:
+
+```bash
+bash infra/scripts/safectl.sh check remote
+```
+
 What this does:
 
 - copies the checked-in `safe` control repo to `/opt/safe-control` on the remote host
 - renders host-side runtime credentials from `~/.keys/safe` into `/srv/safe-secrets/agent.env`
+- supports split host credential files: `github.env`, `codex.env`, `claude.env` (or combined `agent.env`)
 - writes a local Ansible inventory for the remote host
 - runs the same `safe` Ansible roles used for the local Multipass path
+- creates/updates `operator` with SSH key access copied from the bootstrap SSH user
+- allows passwordless `sudo` for `operator` on `/usr/local/bin/safe-*` helper commands
 
 After that, the remote host should have the same guest-side helper model as `safevm`.
+
+## Optional: Provision DigitalOcean With Terraform
+
+If you have not created a droplet yet, use the scaffold in `infra/terraform/`:
+
+```bash
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars
+export TF_VAR_do_token="<digitalocean-token>"
+terraform init
+terraform apply
+terraform output bootstrap_command
+```
+
+Then run the printed `bootstrap_command` from the repo root to apply the same Ansible provisioning used by the Multipass path.
 
 ## Safe Model On A Remote Linux Host
 
@@ -76,4 +107,11 @@ To validate app containers from the fork on the host boundary:
 ```bash
 sudo /usr/local/bin/safe-run-fork-compose socialpredict up -d --build
 sudo /usr/local/bin/safe-run-fork-compose socialpredict ps
+```
+
+Remote control example from your local machine:
+
+```bash
+ssh -t operator@<droplet-ip> "sudo /usr/local/bin/safe-runner-status"
+ssh -t operator@<droplet-ip> "sudo /usr/local/bin/safe-enter-fork socialpredict"
 ```

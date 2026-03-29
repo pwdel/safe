@@ -81,6 +81,7 @@ Target model:
 - `infra/ansible/`
 - `infra/docker/compose.yml`
 - `infra/docker/coding-runner/Dockerfile`
+- `infra/terraform/`
 - `infra/scripts/`
 
 Important defaults:
@@ -95,6 +96,7 @@ Important defaults:
 - `bash infra/scripts/bootstrap_mac.sh` launches Ubuntu in Multipass and applies Ansible
 - the bootstrap script seeds `~/.ssh/id_ed25519.pub` into the guest's `ubuntu` account so Ansible can connect
 - Ansible installs Docker and creates users and workspace directories
+- Ansible can build and start the coding runner automatically during provisioning
 - Docker runs a non-root coding container against a fork cloned under `/srv/workspaces/forks`
 - Codex or Claude Code may run inside that container with bypassed internal permissions because the outer VM and host boundaries still exist
 - app validation containers should be started from VM helper scripts, not from Docker-in-Docker inside the coding runner
@@ -110,6 +112,15 @@ Host-side helpers exist for the outer VM boundary:
 
 These are intended to make the VM itself disposable in the same way the runner container is disposable.
 
+A unified wrapper is also available:
+
+- `bash infra/scripts/safectl.sh --help`
+- `bash infra/scripts/safectl.sh local bootstrap`
+- `bash infra/scripts/safectl.sh local test`
+- `bash infra/scripts/safectl.sh --host <droplet-ip> remote bootstrap`
+- `bash infra/scripts/safectl.sh --host <droplet-ip> remote helper safe-runner-status`
+- `bash infra/scripts/safectl.sh terraform deploy`
+
 ## What Bootstrap Creates
 
 After a successful bootstrap:
@@ -117,7 +128,11 @@ After a successful bootstrap:
 - Multipass instance `safevm` exists and is running
 - the control-plane repo is available in the guest at `/opt/safe-control`
 - Docker is installed in the guest
+- coding runner image is built and the `coding` container is started by default during provisioning
 - helper commands exist in the guest:
+  - `/usr/local/bin/safe-prepare-runner-image`
+  - `/usr/local/bin/safe-pull-runner-image`
+  - `/usr/local/bin/safe-build-runner-image`
   - `/usr/local/bin/safe-start-runner`
   - `/usr/local/bin/safe-start-runner-offline`
   - `/usr/local/bin/safe-stop-runner`
@@ -156,6 +171,46 @@ The helper scripts enforce the intended structure:
 - `safe-clone-fork <fork-url> <target-name> [upstream-url]` clones the fork as `origin`
 - if an `upstream-url` is supplied, it is added as `upstream` with pushing disabled
 - a `pre-push` hook is installed in the checkout to block pushes to any remote except `origin`
+
+## App Validation Workflow
+
+App containers should run from the VM boundary (not inside the coding runner).
+
+Typical flow:
+
+```bash
+# inside the VM
+sudo /usr/local/bin/safe-clone-fork <fork-url> socialpredict <upstream-url>
+sudo /usr/local/bin/safe-start-runner
+sudo /usr/local/bin/safe-enter-fork socialpredict
+```
+
+Run coding tasks in the runner shell, then exit back to the VM shell and validate:
+
+```bash
+# back on the VM host shell
+sudo /usr/local/bin/safe-run-fork-compose socialpredict up -d --build
+sudo /usr/local/bin/safe-run-fork-compose socialpredict ps
+sudo /usr/local/bin/safe-run-fork-compose socialpredict logs --tail=200
+```
+
+When finished:
+
+```bash
+sudo /usr/local/bin/safe-run-fork-compose socialpredict down --remove-orphans
+```
+
+This separation keeps Docker control for app/test containers on the VM layer while the agent remains constrained to the non-root runner container.
+
+## DigitalOcean Terraform Scaffold
+
+`infra/terraform/` provides a baseline scaffold for DigitalOcean:
+
+- VPC
+- SSH-restricted firewall
+- Ubuntu 24.04 droplet for the outer runtime boundary
+
+See `infra/terraform/README.md` for usage, variables, and how to hand off to `LINUX/bootstrap_remote.sh`.
 
 ## Container Hardening
 
@@ -196,10 +251,40 @@ sudo /usr/local/bin/safe-start-runner-offline
 
 The runner lifecycle is intentionally disposable:
 
+- `safe-prepare-runner-image` waits for Docker and runs retry-backed pull/build steps
+- `safe-pull-runner-image` pulls a registry-backed `SAFE_RUNNER_IMAGE` without rebuilding
+- `safe-build-runner-image` rebuilds the runner image from local Docker context
 - `safe-stop-runner` stops the coding container
 - `safe-remove-runner` removes the coding container without deleting fork data
 - `safe-rebuild-runner` recreates the container from the current image definition
 - `safe-runner-status` shows current runner status
+
+Runner image defaults:
+
+- `SAFE_RUNNER_IMAGE` defaults to `safe-coding-runner:local`
+- pull behavior defaults to `SAFE_RUNNER_PULL=auto`:
+  - skip pull for the default local tag
+  - pull when `SAFE_RUNNER_IMAGE` is set to a non-local tag
+- Ansible auto-run defaults are defined in `infra/ansible/group_vars/all.yml`:
+  - `auto_build_runner_image: true`
+  - `auto_start_runner: true`
+  - `auto_show_runner_status: true`
+  - `copy_bootstrap_authorized_keys_to_admin_user: true`
+  - `admin_user_passwordless_safe_helpers: true`
+
+Smoke test for pull/build/start reliability from inside the VM:
+
+```bash
+sudo /usr/local/bin/safe-build-runner-image
+sudo /usr/local/bin/safe-start-runner
+sudo /usr/local/bin/safe-runner-status
+```
+
+Optional pull smoke test when you have a published runner image:
+
+```bash
+sudo env SAFE_RUNNER_IMAGE=<registry>/<repo>:<tag> /usr/local/bin/safe-pull-runner-image
+```
 
 ## Runtime Credentials
 
@@ -208,17 +293,30 @@ Host-side runtime credentials are expected under `~/.keys/safe` and are copied i
 Supported host files:
 
 - `~/.keys/safe/github.env`
+- `~/.keys/safe/codex.env`
+- `~/.keys/safe/claude.env`
 - `~/.keys/safe/openai.env`
 - or a combined `~/.keys/safe/agent.env`
 
 Those files are rendered into:
 
 - guest path: `/srv/safe-secrets/agent.env`
+- guest mirror path: `/home/operator/.keys/safe/agent.env`
 - container path: environment variables loaded through Docker Compose `env_file`
+- container file mount: `/home/agent/.keys/safe/agent.env` (read-only)
+- persistent Codex auth path: `/home/agent/.codex` backed by `/srv/safe-state/codex`
 
 The intended values are:
 
 - `GITHUB_TOKEN` or `GH_TOKEN` for sandbox GitHub access
 - `OPENAI_API_KEY` for Codex / OpenAI runtime access
+- `ANTHROPIC_API_KEY` for Claude runtime access
 
 The helper `safe-init-runner-auth` initializes GitHub CLI auth inside the coding runner from those injected environment variables.
+For Codex device auth, run `safe-codex-login` (or `safectl ... codex-login`).
+
+Run host preflight checks before bootstrap:
+
+```bash
+bash infra/scripts/safectl.sh check host
+```

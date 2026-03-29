@@ -17,6 +17,7 @@ ANSIBLE_DIR="$INFRA_DIR/ansible"
 ARCHIVE_PATH="$(mktemp /tmp/safe-linux-bootstrap.XXXXXX.tar.gz)"
 AGENT_ENV_PATH="$(mktemp /tmp/safe-linux-agent-env.XXXXXX)"
 RENDER_AGENT_ENV="$INFRA_DIR/scripts/render_host_agent_env.sh"
+CHECK_HOST_PREREQS="$INFRA_DIR/scripts/check_host_prereqs.sh"
 RENDER_INVENTORY="$ANSIBLE_DIR/scripts/render_inventory_for_ssh_host.sh"
 
 cleanup() {
@@ -38,6 +39,15 @@ require_cmd ansible-playbook
 require_cmd scp
 require_cmd ssh
 require_cmd tar
+
+CHECK_ARGS=(--target remote --host-keys-dir "$HOST_KEYS_DIR" --ssh-private-key "$SSH_KEY")
+if [[ -f "${SSH_KEY}.pub" ]]; then
+  CHECK_ARGS+=(--ssh-public-key "${SSH_KEY}.pub")
+fi
+if [[ "${REQUIRE_RUNTIME_CREDENTIALS:-0}" == "1" ]]; then
+  CHECK_ARGS+=(--require-credentials)
+fi
+bash "$CHECK_HOST_PREREQS" "${CHECK_ARGS[@]}"
 
 if [[ -z "$TARGET_HOST" ]]; then
   echo "TARGET_HOST is required" >&2
@@ -84,7 +94,7 @@ ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "\
   mkdir -p /tmp/safe-control && \
   tar -xzf /tmp/safe-control.tgz -C /tmp/safe-control && \
   sudo cp -a /tmp/safe-control/. '$TARGET_APP_ROOT/' && \
-  sudo install -m 0600 /tmp/agent.env '$SECRETS_ROOT/agent.env' && \
+  sudo install -m 0600 -o root -g root /tmp/agent.env '$SECRETS_ROOT/agent.env' && \
   rm -rf /tmp/safe-control /tmp/safe-control.tgz /tmp/agent.env"
 
 TARGET_HOST="$TARGET_HOST" \

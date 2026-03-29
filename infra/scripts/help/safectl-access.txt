@@ -1,0 +1,21 @@
+Layered access model:
+
+1) VM host shell (default VM user)
+  - local:  bash infra/scripts/safectl.sh local shell
+  - purpose: low-level VM inspection
+  - note: may not have docker socket access
+
+2) VM/VPS host shell as operator
+  - local:  bash infra/scripts/safectl.sh local operator-shell
+  - remote: bash infra/scripts/safectl.sh --host <ip> remote operator-shell
+  - purpose: docker-aware host operations and safe helper execution
+
+3) Runner container shell
+  - local:  bash infra/scripts/safectl.sh local runner-shell
+  - remote: bash infra/scripts/safectl.sh --host <ip> remote runner-shell
+  - purpose: coding/runtime commands inside container as non-root user
+
+4) Runner container fork shell
+  - local:  bash infra/scripts/safectl.sh local fork-shell <fork-name>
+  - remote: bash infra/scripts/safectl.sh --host <ip> remote fork-shell <fork-name>
+  - purpose: coding directly in /workspace/<fork-name>

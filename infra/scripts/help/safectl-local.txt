@@ -1,0 +1,22 @@
+Local commands:
+  local bootstrap              Run macOS -> Multipass bootstrap + provisioning
+  local shell                  Open Multipass shell as default VM user (ubuntu)
+  local operator-shell         SSH to VM as operator user
+  local runner-shell           Enter coding container shell via safe helper
+  local codex-login            Run codex device login inside coding container
+  local fork-shell <name>      Enter coding container shell in /workspace/<name>
+  local status                 Show VM info + runner status over operator SSH
+  local test                   Validate operator access + runner start/status
+  local help                   Show this local help
+
+Notes:
+  - `local shell` lands on VM host as ubuntu, which may not have direct docker socket access.
+  - Use `local operator-shell` for operator-level host access.
+  - Use `local runner-shell` for direct container-shell access.
+
+Examples:
+  bash infra/scripts/safectl.sh local bootstrap
+  bash infra/scripts/safectl.sh local operator-shell
+  bash infra/scripts/safectl.sh local runner-shell
+  bash infra/scripts/safectl.sh local codex-login
+  bash infra/scripts/safectl.sh local fork-shell socialpredict

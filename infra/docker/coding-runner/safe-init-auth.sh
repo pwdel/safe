@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Load mounted runtime env file when present so auth init also works
+# for ad-hoc container shells without compose env injection.
+if [[ -f "$HOME/.keys/safe/agent.env" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$HOME/.keys/safe/agent.env"
+  set +a
+fi
+
 if [[ -n "${GITHUB_TOKEN:-}" || -n "${GH_TOKEN:-}" ]]; then
   export GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
   if command -v gh >/dev/null 2>&1; then
@@ -20,4 +29,10 @@ if [[ -n "${OPENAI_API_KEY:-}" ]]; then
   echo "OpenAI API key is present in the runner environment."
 else
   echo "OpenAI API key not present in runner environment."
+fi
+
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+  echo "Anthropic API key is present in the runner environment."
+else
+  echo "Anthropic API key not present in runner environment."
 fi

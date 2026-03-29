@@ -1,7 +1,17 @@
 ---
 admin_user: operator
 safe_user: reviewer
+runner_host_group: safeagent
+runner_host_group_gid: 10001
 app_root: /opt/safe-control
 workspace_root: /srv/workspaces
 fork_root: /srv/workspaces/forks
 secrets_root: /srv/safe-secrets
+runner_state_root: /srv/safe-state
+runner_codex_state_dir: /srv/safe-state/codex
+auto_build_runner_image: true
+auto_start_runner: true
+auto_show_runner_status: true
+copy_bootstrap_authorized_keys_to_admin_user: true
+admin_user_passwordless_safe_helpers: true
+safe_helper_sudo_command_glob: /usr/local/bin/safe-*

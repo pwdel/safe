@@ -26,6 +26,14 @@
     state: started
     enabled: true
 
+- name: Wait for docker daemon to answer
+  command: docker info
+  register: docker_info
+  retries: 10
+  delay: 3
+  until: docker_info.rc == 0
+  changed_when: false
+
 - name: Allow OpenSSH through firewall
   community.general.ufw:
     rule: allow
