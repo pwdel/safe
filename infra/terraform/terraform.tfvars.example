@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (or pass -var flags) and fill with your values.
+
+region            = "nyc3"
+droplet_size      = "s-2vcpu-4gb"
+allowed_ssh_cidrs = ["203.0.113.10/32"]
+ssh_public_key    = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... your-key-comment"

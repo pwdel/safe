@@ -20,13 +20,61 @@
     path: "{{ secrets_root }}"
     state: directory
     owner: "{{ admin_user }}"
+    group: "{{ runner_host_group }}"
+    mode: "0750"
+
+- name: Create runner state root
+  file:
+    path: "{{ runner_state_root }}"
+    state: directory
+    owner: root
+    group: "{{ runner_host_group }}"
+    mode: "0770"
+
+- name: Create Codex state directory
+  file:
+    path: "{{ runner_codex_state_dir }}"
+    state: directory
+    owner: root
+    group: "{{ runner_host_group }}"
+    mode: "2770"
+
+- name: Ensure admin key directory exists
+  file:
+    path: "/home/{{ admin_user }}/.keys/safe"
+    state: directory
+    owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
     mode: "0700"
+
+- name: Check if admin key env file exists
+  stat:
+    path: "/home/{{ admin_user }}/.keys/safe/agent.env"
+  register: admin_agent_env_file
+
+- name: Sync admin key env file into runtime secrets when present
+  copy:
+    src: "/home/{{ admin_user }}/.keys/safe/agent.env"
+    dest: "{{ secrets_root }}/agent.env"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ runner_host_group }}"
+    mode: "0640"
+  when: admin_agent_env_file.stat.exists
 
 - name: Ensure runtime agent env file exists
   file:
     path: "{{ secrets_root }}/agent.env"
     state: touch
+    owner: "{{ admin_user }}"
+    group: "{{ runner_host_group }}"
+    mode: "0640"
+
+- name: Mirror runtime env file into admin key directory
+  copy:
+    src: "{{ secrets_root }}/agent.env"
+    dest: "/home/{{ admin_user }}/.keys/safe/agent.env"
+    remote_src: true
     owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
     mode: "0600"
@@ -57,6 +105,140 @@
     group: "{{ admin_user }}"
     mode: "0644"
 
+- name: Copy docker runner init auth script
+  copy:
+    src: "{{ app_root }}/infra/docker/coding-runner/safe-init-auth.sh"
+    dest: "{{ workspace_root }}/docker/safe-init-auth.sh"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+
+- name: Copy docker runner command guard script
+  copy:
+    src: "{{ app_root }}/infra/docker/coding-runner/safe-guard-command.sh"
+    dest: "{{ workspace_root }}/docker/safe-guard-command.sh"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+
+- name: Copy docker runner shell profile
+  copy:
+    src: "{{ app_root }}/infra/docker/coding-runner/safe-shellrc"
+    dest: "{{ workspace_root }}/docker/safe-shellrc"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+
+- name: Create helper to prepare coding runner image
+  copy:
+    dest: /usr/local/bin/safe-prepare-runner-image
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+
+      retries="${SAFE_RUNNER_RETRIES:-3}"
+      delay_seconds="${SAFE_RUNNER_RETRY_DELAY_SECONDS:-5}"
+      docker_wait_seconds="${SAFE_RUNNER_DOCKER_WAIT_SECONDS:-60}"
+      runner_image="${SAFE_RUNNER_IMAGE:-safe-coding-runner:local}"
+      pull_mode="${SAFE_RUNNER_PULL:-auto}"
+      pull_required="${SAFE_RUNNER_PULL_REQUIRED:-0}"
+      build_image="${SAFE_RUNNER_BUILD:-1}"
+
+      pull_image=0
+      case "$pull_mode" in
+        1|true|yes|on)
+          pull_image=1
+          ;;
+        0|false|no|off)
+          pull_image=0
+          ;;
+        auto)
+          if [[ "$runner_image" != "safe-coding-runner:local" ]]; then
+            pull_image=1
+          fi
+          ;;
+        *)
+          echo "Invalid SAFE_RUNNER_PULL value: $pull_mode" >&2
+          exit 2
+          ;;
+      esac
+
+      retry_cmd() {
+        local attempt=1
+        while true; do
+          if "$@"; then
+            return 0
+          fi
+          if (( attempt >= retries )); then
+            return 1
+          fi
+          echo "Retrying (${attempt}/${retries}): $*" >&2
+          sleep "$delay_seconds"
+          attempt=$((attempt + 1))
+        done
+      }
+
+      deadline=$((SECONDS + docker_wait_seconds))
+      until docker info >/dev/null 2>&1; do
+        if (( SECONDS >= deadline )); then
+          echo "Docker daemon was not ready after ${docker_wait_seconds}s." >&2
+          exit 1
+        fi
+        sleep 2
+      done
+
+      if [[ "$pull_image" == "1" ]]; then
+        if ! retry_cmd docker compose pull coding; then
+          if [[ "$pull_required" == "1" ]]; then
+            echo "Runner image pull failed and is required by SAFE_RUNNER_PULL_REQUIRED=1." >&2
+            exit 1
+          fi
+          echo "Runner image pull failed; continuing with local build context." >&2
+        fi
+      fi
+
+      if [[ "$build_image" == "1" ]]; then
+        retry_cmd docker compose build --pull coding
+      elif [[ "$pull_image" == "0" ]]; then
+        if [[ -z "$(docker compose images -q coding 2>/dev/null)" ]]; then
+          echo "Runner image is not available locally. Run safe-build-runner-image or safe-start-runner first." >&2
+          exit 1
+        fi
+      fi
+
+- name: Create helper to pull coding runner image
+  copy:
+    dest: /usr/local/bin/safe-pull-runner-image
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ "${SAFE_RUNNER_IMAGE:-safe-coding-runner:local}" == "safe-coding-runner:local" ]]; then
+        echo "safe-pull-runner-image needs a registry tag in SAFE_RUNNER_IMAGE." >&2
+        exit 2
+      fi
+      exec env SAFE_RUNNER_BUILD=0 SAFE_RUNNER_PULL=1 SAFE_RUNNER_PULL_REQUIRED=1 /usr/local/bin/safe-prepare-runner-image
+
+- name: Create helper to build coding runner image
+  copy:
+    dest: /usr/local/bin/safe-build-runner-image
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      exec env SAFE_RUNNER_BUILD=1 SAFE_RUNNER_PULL=0 /usr/local/bin/safe-prepare-runner-image
+
 - name: Create operator helper script
   copy:
     dest: /usr/local/bin/safe-start-runner
@@ -67,7 +249,8 @@
       #!/usr/bin/env bash
       set -euo pipefail
       cd {{ workspace_root }}/docker
-      exec docker compose up -d --build
+      /usr/local/bin/safe-prepare-runner-image
+      exec docker compose up -d --no-build coding
 
 - name: Create helper to start the coding runner offline
   copy:
@@ -79,7 +262,8 @@
       #!/usr/bin/env bash
       set -euo pipefail
       cd {{ workspace_root }}/docker
-      exec env SAFE_RUNNER_NETWORK_MODE=none docker compose up -d --build coding
+      env SAFE_RUNNER_BUILD=0 SAFE_RUNNER_PULL=0 /usr/local/bin/safe-prepare-runner-image
+      exec env SAFE_RUNNER_NETWORK_MODE=none docker compose up -d --no-build coding
 
 - name: Create helper to stop the coding runner
   copy:
@@ -117,7 +301,8 @@
       cd {{ workspace_root }}/docker
       docker compose stop coding || true
       docker compose rm -f -s coding || true
-      exec docker compose up -d --build coding
+      /usr/local/bin/safe-prepare-runner-image
+      exec docker compose up -d --force-recreate --no-build coding
 
 - name: Create helper to inspect coding runner status
   copy:
@@ -154,6 +339,18 @@
       set -euo pipefail
       cd {{ workspace_root }}/docker
       exec docker compose exec coding safe-init-auth
+
+- name: Create helper to run Codex web/device login in coding container
+  copy:
+    dest: /usr/local/bin/safe-codex-login
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose exec coding codex login --device-auth
 
 - name: Create helper to open shell in coding container at a fork path
   copy:
@@ -312,3 +509,24 @@
     owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
     mode: "0755"
+
+- name: Build coding runner image during provisioning
+  command: /usr/local/bin/safe-build-runner-image
+  when: auto_build_runner_image | bool
+
+- name: Start coding runner during provisioning
+  command: /usr/local/bin/safe-start-runner
+  when: auto_start_runner | bool
+
+- name: Collect coding runner status after provisioning
+  command: /usr/local/bin/safe-runner-status
+  register: safe_runner_status_output
+  changed_when: false
+  when: auto_show_runner_status | bool
+
+- name: Show coding runner status
+  debug:
+    var: safe_runner_status_output.stdout_lines
+  when:
+    - auto_show_runner_status | bool
+    - safe_runner_status_output is defined

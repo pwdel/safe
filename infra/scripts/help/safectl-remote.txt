@@ -1,0 +1,21 @@
+Remote commands:
+  remote bootstrap             Bootstrap target host via LINUX/bootstrap_remote.sh
+  remote shell                 Open SSH shell to remote host as --ssh-user (default: operator)
+  remote operator-shell        Alias of remote shell
+  remote runner-shell          Enter coding container shell via safe helper
+  remote codex-login           Run codex device login inside coding container
+  remote fork-shell <name>     Enter coding container shell in /workspace/<name>
+  remote helper <safe-*> [...] Run /usr/local/bin/safe-* helper via sudo -n
+  remote exec -- <cmd...>      Run arbitrary command on remote host
+  remote help                  Show this remote help
+
+Required:
+  - pass --host <ip-or-hostname> (or set TARGET_HOST)
+
+Examples:
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote bootstrap
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote operator-shell
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote runner-shell
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote codex-login
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote helper safe-runner-status
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote fork-shell socialpredict

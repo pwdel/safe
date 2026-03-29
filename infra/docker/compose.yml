@@ -1,5 +1,6 @@
 services:
   coding:
+    image: "${SAFE_RUNNER_IMAGE:-safe-coding-runner:local}"
     build:
       context: .
       dockerfile: Dockerfile
@@ -21,3 +22,5 @@ services:
     pids_limit: 512
     volumes:
       - /srv/workspaces/forks:/workspace
+      - /srv/safe-secrets:/home/agent/.keys/safe:ro
+      - /srv/safe-state/codex:/home/agent/.codex

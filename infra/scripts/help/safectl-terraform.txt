@@ -1,0 +1,15 @@
+Terraform commands:
+  terraform init [args...]      Run terraform init in infra/terraform
+  terraform plan [args...]      Run terraform plan in infra/terraform
+  terraform apply [args...]     Run terraform apply in infra/terraform
+  terraform output-bootstrap    Print terraform output bootstrap_command
+  terraform deploy [args...]    terraform init + apply, then execute bootstrap command
+  terraform help                Show this terraform help
+
+Options:
+  --auto-approve                Adds -auto-approve to apply/deploy
+
+Examples:
+  bash infra/scripts/safectl.sh terraform init
+  bash infra/scripts/safectl.sh terraform plan
+  bash infra/scripts/safectl.sh --auto-approve terraform deploy

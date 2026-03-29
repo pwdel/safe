@@ -1,0 +1,14 @@
+Check commands:
+  check host                 Run full host preflight (tooling + keys)
+  check local                Run macOS-focused preflight checks
+  check remote               Run remote-VPS-focused preflight checks
+  check help                 Show this check help
+
+Notes:
+  - Checks expected CLI tools and SSH key files.
+  - Renders credentials from ~/.keys/safe and validates supported keys.
+  - Set REQUIRE_RUNTIME_CREDENTIALS=1 to fail when GitHub/model keys are missing.
+
+Examples:
+  bash infra/scripts/safectl.sh check host
+  REQUIRE_RUNTIME_CREDENTIALS=1 bash infra/scripts/safectl.sh check local

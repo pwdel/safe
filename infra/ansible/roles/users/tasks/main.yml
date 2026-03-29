@@ -1,8 +1,14 @@
 ---
+- name: Ensure runner host group exists
+  group:
+    name: "{{ runner_host_group }}"
+    gid: "{{ runner_host_group_gid }}"
+    system: true
+
 - name: Create admin user with sudo
   user:
     name: "{{ admin_user }}"
-    groups: sudo,docker
+    groups: "sudo,docker,{{ runner_host_group }}"
     append: true
     shell: /bin/bash
     create_home: true
@@ -12,3 +18,58 @@
     name: "{{ safe_user }}"
     shell: /bin/bash
     create_home: true
+
+- name: Resolve bootstrap SSH authorized_keys path
+  set_fact:
+    bootstrap_authorized_keys_path: >-
+      {{ '/root/.ssh/authorized_keys' if (ansible_user | default('ubuntu')) == 'root' else '/home/' + (ansible_user | default('ubuntu')) + '/.ssh/authorized_keys' }}
+  when: copy_bootstrap_authorized_keys_to_admin_user | bool
+
+- name: Check bootstrap SSH authorized_keys file
+  stat:
+    path: "{{ bootstrap_authorized_keys_path }}"
+  register: bootstrap_authorized_keys_file
+  when: copy_bootstrap_authorized_keys_to_admin_user | bool
+
+- name: Read bootstrap SSH authorized_keys file
+  slurp:
+    path: "{{ bootstrap_authorized_keys_path }}"
+  register: bootstrap_authorized_keys_raw
+  when:
+    - copy_bootstrap_authorized_keys_to_admin_user | bool
+    - bootstrap_authorized_keys_file.stat.exists
+
+- name: Parse bootstrap SSH keys
+  set_fact:
+    bootstrap_authorized_keys: >-
+      {{
+        (bootstrap_authorized_keys_raw.content | b64decode).splitlines()
+        | map('trim')
+        | reject('equalto', '')
+        | reject('match', '^#')
+        | list
+      }}
+  when:
+    - copy_bootstrap_authorized_keys_to_admin_user | bool
+    - bootstrap_authorized_keys_file.stat.exists
+
+- name: Ensure admin user has bootstrap SSH keys
+  authorized_key:
+    user: "{{ admin_user }}"
+    state: present
+    key: "{{ item }}"
+  loop: "{{ bootstrap_authorized_keys | default([]) }}"
+  when:
+    - copy_bootstrap_authorized_keys_to_admin_user | bool
+    - bootstrap_authorized_keys_file.stat.exists
+
+- name: Allow admin user to run safe helpers without sudo password
+  copy:
+    dest: "/etc/sudoers.d/safe-helpers-{{ admin_user }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+    content: |
+      {{ admin_user }} ALL=(root) NOPASSWD: {{ safe_helper_sudo_command_glob }}
+  when: admin_user_passwordless_safe_helpers | bool

@@ -6,7 +6,7 @@ OUTPUT="${OUTPUT:-}"
 
 allowed_key() {
   case "$1" in
-    GITHUB_TOKEN|GH_TOKEN|OPENAI_API_KEY|OPENAI_ORG_ID|OPENAI_BASE_URL)
+    GITHUB_TOKEN|GH_TOKEN|OPENAI_API_KEY|OPENAI_ORG_ID|OPENAI_BASE_URL|ANTHROPIC_API_KEY|ANTHROPIC_BASE_URL)
       return 0
       ;;
     *)
@@ -47,15 +47,15 @@ fi
 if [[ -f "$HOST_KEYS_DIR/agent.env" ]]; then
   emit_valid_lines "$HOST_KEYS_DIR/agent.env" >>"$OUTPUT"
 else
-  if [[ -f "$HOST_KEYS_DIR/github.env" ]]; then
-    emit_valid_lines "$HOST_KEYS_DIR/github.env" >>"$OUTPUT"
-  fi
-  if [[ -f "$HOST_KEYS_DIR/openai.env" ]]; then
-    if [[ -s "$OUTPUT" ]]; then
-      printf '\n' >>"$OUTPUT"
+  files=(github.env codex.env claude.env openai.env)
+  for f in "${files[@]}"; do
+    if [[ -f "$HOST_KEYS_DIR/$f" ]]; then
+      if [[ -s "$OUTPUT" ]]; then
+        printf '\n' >>"$OUTPUT"
+      fi
+      emit_valid_lines "$HOST_KEYS_DIR/$f" >>"$OUTPUT"
     fi
-    emit_valid_lines "$HOST_KEYS_DIR/openai.env" >>"$OUTPUT"
-  fi
+  done
 fi
 
 chmod 0600 "$OUTPUT"

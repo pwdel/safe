@@ -1,0 +1,30 @@
+Usage:
+  bash infra/scripts/safectl.sh [options] <group> <command> [args...]
+  bash infra/scripts/safectl.sh help [topic]
+
+Topics:
+  overview   General usage and examples
+  local      Local Multipass/VM commands
+  remote     Remote VPS commands
+  terraform  Terraform provisioning commands
+  access     Layered shell access model
+  check      Host preflight checks
+
+Global options:
+  --host <ip-or-hostname>       Remote host for remote commands
+  --ssh-user <user>             SSH user for remote commands (default: operator)
+  --bootstrap-user <user>       SSH user for remote bootstrap (default: root)
+  --port <port>                 SSH port (default: 22)
+  --key <path>                  SSH private key path (default: ~/.ssh/id_ed25519)
+  --auto-approve                Use terraform apply -auto-approve
+  -h, --help                    Show this overview
+
+Examples:
+  bash infra/scripts/safectl.sh local bootstrap
+  bash infra/scripts/safectl.sh local codex-login
+  bash infra/scripts/safectl.sh check host
+  bash infra/scripts/safectl.sh local test
+  bash infra/scripts/safectl.sh help local
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote bootstrap
+  bash infra/scripts/safectl.sh --host 203.0.113.10 remote runner-shell
+  bash infra/scripts/safectl.sh terraform deploy --var-file=terraform.tfvars
