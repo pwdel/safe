@@ -47,16 +47,13 @@ Already in place:
 Still incomplete:
 
 - Create a new repo that serves as the source of truth for the auto-coding environment pulled into `safe` runtimes
-- Define safe runtime injection for GitHub and OpenAI credentials
 - Define the machine setup performed inside the coding image, including Codex, Claude, OpenCode, Go, and required Go tools
 - Validate that pulling code from within the VM works from inside the Docker container
 - Validate authentication from inside the container to Codex, Claude, and OpenCode against the chosen models
 - Ensure hooks, agents, skills, and the full auto-coding environment can be installed and activated inside the container
-- Add stronger runtime guardrails around shell behavior
-- Decide how much outbound network access to allow
-- Finish the Linux / DigitalOcean provisioning path
 - Create a sandbox GitHub account for fork-only automation
 - Review `MACOS/` and `LINUX/` for consolidation into `../machinesetup` and replace local setup docs with pointers where appropriate
+- Wire a real `socialpredict` fork workflow through the hardened runner
 - Fully document the final operating procedure in the main README
 
 ## Checklist
@@ -88,3 +85,25 @@ Still incomplete:
 - [x] Add a documented workflow for app validation containers launched from the VM layer
 - [x] Review whether any additional artifacts should be gitignored
 - [ ] Document the final end-to-end operating procedure in `README.md`
+
+## DigitalOcean Terraform Setup Plan
+
+Goal: make DigitalOcean deployment repeatable while keeping secrets out of git and making the expected local key formats explicit in `safectl check local`.
+
+Draft `~/.keys/safe` file map to implement:
+
+- Runtime auth files use `.env` format (`KEY=VALUE`, optional `#` comments, uppercase keys only).
+- `~/.keys/safe/agent.env` (preferred combined file) may include: `GH_TOKEN`, `GITHUB_TOKEN`, `OPENAI_API_KEY`, `OPENAI_ORG_ID`, `OPENAI_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`.
+- Split runtime files remain supported when `agent.env` is absent: `github.env`, `codex.env`, `claude.env`, `openai.env`.
+- Terraform secret file: `~/.keys/safe/terraform.env` with at least `TF_VAR_do_token=<digitalocean_token>`.
+
+- [x] Add this plan section to `OBJECTIVE.md`.
+- [x] Finalize and document the host key/env convention under `~/.keys/safe` for runtime auth + Terraform.
+- [x] Define and document file format rules for `~/.keys/safe/*.env`: `KEY=VALUE`, `#` comments allowed, no committed secrets.
+- [x] Define required Terraform secret file: `~/.keys/safe/terraform.env` with at least `TF_VAR_do_token=<digitalocean_token>`.
+- [x] Define optional Terraform override variables for `terraform.env` (for example: `TF_VAR_region`, `TF_VAR_droplet_size`, `TF_VAR_allowed_ssh_cidrs`).
+- [x] Update `infra/scripts/safectl.sh check local`/`check host` output to explicitly show expected `~/.keys/safe` files and env format requirements.
+- [x] Extend `infra/scripts/check_host_prereqs.sh` to validate presence/shape of `terraform.env` entries when DigitalOcean checks are requested.
+- [x] Decide how `safectl terraform ...` loads local Terraform vars (explicit `--var-file`, sourced env file, or both) and implement one clear path.
+- [ ] Add docs for secure local setup flow: create key files, run `safectl check local`, run `safectl terraform init/plan/apply`.
+- [ ] Validate full DigitalOcean path end-to-end (provision droplet, run bootstrap command, confirm runner lifecycle commands work on remote host).

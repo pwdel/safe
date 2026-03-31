@@ -170,7 +170,7 @@ The helper scripts enforce the intended structure:
 
 - `safe-clone-fork <fork-url> <target-name> [upstream-url]` clones the fork as `origin`
 - if an `upstream-url` is supplied, it is added as `upstream` with pushing disabled
-- a `pre-push` hook is installed in the checkout to block pushes to any remote except `origin`
+- global runner git hooks in `~/.git-hooks` block pushes to any remote except `origin` and secret-scan commits/pushes with `trufflehog`
 
 ## App Validation Workflow
 
@@ -221,12 +221,17 @@ The coding runner is intended to:
 - use `no-new-privileges`
 - avoid access to the Docker socket
 - mount only the fork workspace, not the whole VM filesystem
+- keep `/home/agent` root-owned and read-only, with only scoped writable paths (`/workspace`, `~/.tmp`, and mounted `~/.codex`)
+- mount `~/.codex/config.toml` from host secrets as read-only
+- include Go quality tooling used by agent workflows (`gofmt`, `go vet`, `gocyclo`, `golangci-lint`, `staticcheck`)
 
 Runtime shell guardrails are also enabled in the runner:
 
 - wrapped commands block a small set of high-risk operations by default
 - current wrapped commands: `rm`, `chmod`, `chown`, `dd`, `mkfs`, `fdisk`, `sfdisk`, `parted`, `mount`, `umount`
 - intentional bypass requires `SAFE_ALLOW_RISKY=1`
+- global git hooks are enabled via `core.hooksPath=~/.git-hooks`
+- `pre-commit` and `pre-push` run `trufflehog` to catch secret leaks before commit/push
 
 ## Network Policy
 
@@ -248,6 +253,9 @@ For tasks that do not need internet access, start the runner with:
 ```bash
 sudo /usr/local/bin/safe-start-runner-offline
 ```
+
+The project does not auto-enforce "GitHub-only egress" in-container.
+Use VM/cloud firewall policy for allowlisting if you need that level of restriction.
 
 The runner lifecycle is intentionally disposable:
 
@@ -297,14 +305,18 @@ Supported host files:
 - `~/.keys/safe/claude.env`
 - `~/.keys/safe/openai.env`
 - or a combined `~/.keys/safe/agent.env`
+- optional task-run config: `~/.keys/safe/task-spec.env`
 
 Those files are rendered into:
 
 - guest path: `/srv/safe-secrets/agent.env`
 - guest mirror path: `/home/operator/.keys/safe/agent.env`
+- guest task spec path: `/srv/safe-secrets/task-spec.env`
+- guest task spec mirror path: `/home/operator/.keys/safe/task-spec.env`
 - container path: environment variables loaded through Docker Compose `env_file`
 - container file mount: `/home/agent/.keys/safe/agent.env` (read-only)
 - persistent Codex auth path: `/home/agent/.codex` backed by `/srv/safe-state/codex`
+- read-only Codex config mount: `/home/agent/.codex/config.toml`
 
 The intended values are:
 
@@ -319,4 +331,22 @@ Run host preflight checks before bootstrap:
 
 ```bash
 bash infra/scripts/safectl.sh check host
+```
+
+## Task Repo Flow (Human-Run)
+
+Task execution is intentionally human-triggered. Provisioning can sync the task repo and apply assets, but does not auto-run `codex-runner.sh`.
+
+`~/.keys/safe/task-spec.env` can define:
+
+- required: `SAFE_TASK_SPEC_REPO`, `SAFE_TASK_SPEC_REF`
+- optional: `SAFE_TASK_SPEC_DIR`, `SAFE_TASK_SETUP_CMD`, `SAFE_TASK_RUNNER_BIN`, `SAFE_TASK_CODEX_MODE`
+- optional fork wiring: `SAFE_TASK_TARGET_FORK_URL`, `SAFE_TASK_TARGET_UPSTREAM_URL`, `SAFE_TASK_TARGET_DIR`, `SAFE_TASK_SANDBOX_BRANCH`, `SAFE_TASK_SANDBOX_BASE_REF`
+
+Manual helper flow:
+
+```bash
+sudo /usr/local/bin/safe-sync-task-spec
+sudo /usr/local/bin/safe-enter-task-spec
+# inside container: run codex-runner.sh with chosen mode (safe/full-access/yolo) as a human decision
 ```

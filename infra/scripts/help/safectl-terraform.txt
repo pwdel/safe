@@ -2,14 +2,25 @@ Terraform commands:
   terraform init [args...]      Run terraform init in infra/terraform
   terraform plan [args...]      Run terraform plan in infra/terraform
   terraform apply [args...]     Run terraform apply in infra/terraform
+  terraform destroy [args...]   Run terraform destroy in infra/terraform
   terraform output-bootstrap    Print terraform output bootstrap_command
+  terraform output-host         Print terraform output droplet_ipv4_address
   terraform deploy [args...]    terraform init + apply, then execute bootstrap command
   terraform help                Show this terraform help
 
 Options:
-  --auto-approve                Adds -auto-approve to apply/deploy
+  --auto-approve                Adds -auto-approve to apply/deploy/destroy
+
+Auth/env behavior:
+  - Auto-loads ~/.keys/safe/terraform.env if present.
+  - Expects KEY=VALUE lines (comments/blank lines allowed).
+  - If TF_VAR_do_token is present, DIGITALOCEAN_ACCESS_TOKEN is exported too.
+  - On apply/deploy, safectl stores SAFE_TARGET_HOST=<droplet_ip> in terraform.env.
+  - On destroy, safectl removes SAFE_TARGET_HOST from terraform.env.
 
 Examples:
   bash infra/scripts/safectl.sh terraform init
   bash infra/scripts/safectl.sh terraform plan
+  bash infra/scripts/safectl.sh terraform output-host
+  bash infra/scripts/safectl.sh --auto-approve terraform destroy
   bash infra/scripts/safectl.sh --auto-approve terraform deploy

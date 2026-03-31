@@ -6,7 +6,14 @@ Check commands:
 
 Notes:
   - Checks expected CLI tools and SSH key files.
-  - Renders credentials from ~/.keys/safe and validates supported keys.
+  - Env files use strict KEY=VALUE format (no leading 'export').
+  - Blank lines and '#' comments are allowed.
+  - Preferred runtime credential file is ~/.keys/safe/agent.env.
+  - Split runtime files are used only when agent.env is absent: github.env, codex.env, claude.env, openai.env.
+  - Renders credentials from ~/.keys/safe and validates supported runtime keys.
+  - Runtime/Terraform key lists come from infra/scripts/env_key_manifest.sh.
+  - Terraform vars should be in ~/.keys/safe/terraform.env using TF_VAR_* keys (required for DO: TF_VAR_do_token).
+  - Optional task-run config lives in ~/.keys/safe/task-spec.env (repo/ref + task-runner settings).
   - Set REQUIRE_RUNTIME_CREDENTIALS=1 to fail when GitHub/model keys are missing.
 
 Examples:

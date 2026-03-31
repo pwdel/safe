@@ -12,6 +12,8 @@ runner_codex_state_dir: /srv/safe-state/codex
 auto_build_runner_image: true
 auto_start_runner: true
 auto_show_runner_status: true
+auto_sync_task_spec_repo: true
+auto_apply_task_assets: false
 copy_bootstrap_authorized_keys_to_admin_user: true
 admin_user_passwordless_safe_helpers: true
 safe_helper_sudo_command_glob: /usr/local/bin/safe-*

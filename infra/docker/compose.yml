@@ -24,3 +24,4 @@ services:
       - /srv/workspaces/forks:/workspace
       - /srv/safe-secrets:/home/agent/.keys/safe:ro
       - /srv/safe-state/codex:/home/agent/.codex
+      - /srv/safe-secrets/codex.config.toml:/home/agent/.codex/config.toml:ro

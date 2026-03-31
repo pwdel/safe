@@ -1,0 +1,13 @@
+doctl commands:
+  doctl <subcommand...>         Run doctl with shared terraform env loading
+  doctl help                    Show this doctl help
+
+Auth/env behavior:
+  - Auto-loads ~/.keys/safe/terraform.env if present.
+  - Expects KEY=VALUE lines (comments/blank lines allowed).
+  - If TF_VAR_do_token is present, it is mapped to DIGITALOCEAN_ACCESS_TOKEN.
+
+Examples:
+  bash infra/scripts/safectl.sh doctl version
+  bash infra/scripts/safectl.sh doctl auth list
+  bash infra/scripts/safectl.sh doctl compute droplet list

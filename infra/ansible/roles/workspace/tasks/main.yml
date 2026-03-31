@@ -79,6 +79,38 @@
     group: "{{ admin_user }}"
     mode: "0600"
 
+- name: Check if admin task spec env file exists
+  stat:
+    path: "/home/{{ admin_user }}/.keys/safe/task-spec.env"
+  register: admin_task_spec_env_file
+
+- name: Sync admin task spec env file into runtime secrets when present
+  copy:
+    src: "/home/{{ admin_user }}/.keys/safe/task-spec.env"
+    dest: "{{ secrets_root }}/task-spec.env"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0640"
+  when: admin_task_spec_env_file.stat.exists
+
+- name: Ensure runtime task spec env file exists
+  file:
+    path: "{{ secrets_root }}/task-spec.env"
+    state: touch
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Mirror runtime task spec env file into admin key directory
+  copy:
+    src: "{{ secrets_root }}/task-spec.env"
+    dest: "/home/{{ admin_user }}/.keys/safe/task-spec.env"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0600"
+
 - name: Create docker config directory
   file:
     path: "{{ workspace_root }}/docker"
@@ -131,6 +163,16 @@
     owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
     mode: "0644"
+
+- name: Seed readonly Codex config file when missing
+  copy:
+    src: "{{ app_root }}/infra/docker/coding-runner/codex.config.toml"
+    dest: "{{ secrets_root }}/codex.config.toml"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
 
 - name: Create helper to prepare coding runner image
   copy:
@@ -503,12 +545,212 @@
       cd "$target"
       exec docker compose "$@"
 
+- name: Create helper to sync configured task spec repo and optional sandbox fork
+  copy:
+    dest: /usr/local/bin/safe-sync-task-spec
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ "$(id -u)" == "0" ]]; then
+        exec sudo -u {{ admin_user }} -H "$0" "$@"
+      fi
+
+      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
+      if [[ ! -s "$env_file" ]]; then
+        echo "Task spec env is empty at $env_file; nothing to sync."
+        exit 0
+      fi
+
+      set -a
+      # shellcheck disable=SC1090
+      source "$env_file"
+      set +a
+
+      if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
+        echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file; skipping task sync."
+        exit 0
+      fi
+
+      spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
+      spec_dest="{{ fork_root }}/$spec_dir"
+
+      if [[ -d "$spec_dest/.git" ]]; then
+        git -C "$spec_dest" remote set-url origin "$SAFE_TASK_SPEC_REPO"
+      else
+        git clone "$SAFE_TASK_SPEC_REPO" "$spec_dest"
+      fi
+
+      git -C "$spec_dest" fetch --tags --prune origin
+
+      checkout_ref=""
+      if git -C "$spec_dest" rev-parse --verify --quiet "${SAFE_TASK_SPEC_REF}^{commit}" >/dev/null; then
+        checkout_ref="$SAFE_TASK_SPEC_REF"
+      elif git -C "$spec_dest" rev-parse --verify --quiet "refs/tags/${SAFE_TASK_SPEC_REF}^{commit}" >/dev/null; then
+        checkout_ref="refs/tags/${SAFE_TASK_SPEC_REF}"
+      elif git -C "$spec_dest" rev-parse --verify --quiet "origin/${SAFE_TASK_SPEC_REF}^{commit}" >/dev/null; then
+        checkout_ref="origin/${SAFE_TASK_SPEC_REF}"
+      fi
+
+      if [[ -z "$checkout_ref" ]]; then
+        echo "Unable to resolve SAFE_TASK_SPEC_REF=${SAFE_TASK_SPEC_REF} in ${SAFE_TASK_SPEC_REPO}" >&2
+        exit 1
+      fi
+
+      git -C "$spec_dest" checkout --detach "$checkout_ref"
+      git -C "$spec_dest" submodule update --init --recursive
+
+      if [[ -n "${SAFE_TASK_TARGET_FORK_URL:-}" ]]; then
+        target_name="${SAFE_TASK_TARGET_DIR:-socialpredict}"
+        target_dest="{{ fork_root }}/$target_name"
+        if [[ ! -d "$target_dest/.git" ]]; then
+          if [[ -n "${SAFE_TASK_TARGET_UPSTREAM_URL:-}" ]]; then
+            sudo -n /usr/local/bin/safe-clone-fork "$SAFE_TASK_TARGET_FORK_URL" "$target_name" "$SAFE_TASK_TARGET_UPSTREAM_URL"
+          else
+            sudo -n /usr/local/bin/safe-clone-fork "$SAFE_TASK_TARGET_FORK_URL" "$target_name"
+          fi
+        fi
+        if [[ -n "${SAFE_TASK_SANDBOX_BRANCH:-}" ]]; then
+          base_ref="${SAFE_TASK_SANDBOX_BASE_REF:-origin/main}"
+          git -C "$target_dest" fetch --all --prune
+          git -C "$target_dest" checkout -B "$SAFE_TASK_SANDBOX_BRANCH" "$base_ref"
+        fi
+      fi
+
+- name: Create helper to open shell in configured task spec repo
+  copy:
+    dest: /usr/local/bin/safe-enter-task-spec
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ "$(id -u)" == "0" ]]; then
+        exec sudo -u {{ admin_user }} -H "$0" "$@"
+      fi
+
+      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
+      if [[ ! -f "$env_file" ]]; then
+        echo "Task spec env not found: $env_file" >&2
+        exit 1
+      fi
+
+      set -a
+      # shellcheck disable=SC1090
+      source "$env_file"
+      set +a
+
+      spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
+      target="{{ fork_root }}/$spec_dir"
+      if [[ ! -d "$target" ]]; then
+        echo "Task spec checkout not found: $target" >&2
+        echo "Run safe-sync-task-spec first." >&2
+        exit 1
+      fi
+
+      cd {{ workspace_root }}/docker
+      exec docker compose exec --workdir "/workspace/$spec_dir" coding bash
+
+- name: Create helper to apply task repo agent-assets in runner
+  copy:
+    dest: /usr/local/bin/safe-apply-task-assets
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ "$(id -u)" == "0" ]]; then
+        exec sudo -u {{ admin_user }} -H "$0" "$@"
+      fi
+
+      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
+      if [[ ! -s "$env_file" ]]; then
+        echo "Task spec env is empty at $env_file; nothing to apply."
+        exit 0
+      fi
+
+      set -a
+      # shellcheck disable=SC1090
+      source "$env_file"
+      set +a
+
+      if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
+        echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file." >&2
+        exit 1
+      fi
+
+      spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
+      setup_cmd="${SAFE_TASK_SETUP_CMD:-./agent-assets install --tool codex --yes}"
+      target="{{ fork_root }}/$spec_dir"
+      if [[ ! -d "$target" ]]; then
+        echo "Task spec checkout not found: $target" >&2
+        echo "Run safe-sync-task-spec first." >&2
+        exit 1
+      fi
+
+      cd {{ workspace_root }}/docker
+      exec docker compose exec --workdir "/workspace/$spec_dir" coding bash -lc "$setup_cmd"
+
+- name: Create helper to run task repo codex-runner manually
+  copy:
+    dest: /usr/local/bin/safe-run-task-runner
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ "$(id -u)" == "0" ]]; then
+        exec sudo -u {{ admin_user }} -H "$0" "$@"
+      fi
+
+      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
+      if [[ ! -s "$env_file" ]]; then
+        echo "Task spec env is empty at $env_file; nothing to run."
+        exit 0
+      fi
+
+      set -a
+      # shellcheck disable=SC1090
+      source "$env_file"
+      set +a
+
+      if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
+        echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file." >&2
+        exit 1
+      fi
+
+      spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
+      runner_bin="${SAFE_TASK_RUNNER_BIN:-./codex-runner.sh}"
+      default_mode="${SAFE_TASK_CODEX_MODE:-safe}"
+      target="{{ fork_root }}/$spec_dir"
+      if [[ ! -d "$target" ]]; then
+        echo "Task spec checkout not found: $target" >&2
+        echo "Run safe-sync-task-spec first." >&2
+        exit 1
+      fi
+
+      if [[ $# -eq 0 ]]; then
+        set -- --mode "$default_mode"
+      fi
+
+      cd {{ workspace_root }}/docker
+      exec docker compose exec --workdir "/workspace/$spec_dir" coding "$runner_bin" "$@"
+
 - name: Ensure review user cannot write fork root
   file:
     path: "{{ fork_root }}"
     owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
     mode: "0755"
+
+- name: Sync configured task spec repo during provisioning
+  command: /usr/local/bin/safe-sync-task-spec
+  when: auto_sync_task_spec_repo | bool
 
 - name: Build coding runner image during provisioning
   command: /usr/local/bin/safe-build-runner-image
@@ -517,6 +759,12 @@
 - name: Start coding runner during provisioning
   command: /usr/local/bin/safe-start-runner
   when: auto_start_runner | bool
+
+- name: Apply task repo agent-assets in runner during provisioning
+  command: /usr/local/bin/safe-apply-task-assets
+  when:
+    - auto_apply_task_assets | bool
+    - auto_start_runner | bool
 
 - name: Collect coding runner status after provisioning
   command: /usr/local/bin/safe-runner-status

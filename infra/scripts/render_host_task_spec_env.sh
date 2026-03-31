@@ -8,7 +8,7 @@ HOST_KEYS_DIR="${HOST_KEYS_DIR:-$HOME/.keys/safe}"
 OUTPUT="${OUTPUT:-}"
 
 allowed_key() {
-  env_manifest_contains "$1" "${RUNTIME_ALLOWED_KEYS[@]}"
+  env_manifest_contains "$1" "${TASK_SPEC_ALLOWED_KEYS[@]}"
 }
 
 emit_valid_lines() {
@@ -42,22 +42,13 @@ fi
 source "$ENV_MANIFEST_FILE"
 
 if [[ -z "$OUTPUT" ]]; then
-  OUTPUT="$(mktemp /tmp/safe-agent-env.XXXXXX)"
+  OUTPUT="$(mktemp /tmp/safe-task-spec-env.XXXXXX)"
 fi
 
 : >"$OUTPUT"
 
-if [[ -f "$HOST_KEYS_DIR/$RUNTIME_PRIMARY_ENV_FILE" ]]; then
-  emit_valid_lines "$HOST_KEYS_DIR/$RUNTIME_PRIMARY_ENV_FILE" >>"$OUTPUT"
-else
-  for f in "${RUNTIME_SPLIT_ENV_FILES[@]}"; do
-    if [[ -f "$HOST_KEYS_DIR/$f" ]]; then
-      if [[ -s "$OUTPUT" ]]; then
-        printf '\n' >>"$OUTPUT"
-      fi
-      emit_valid_lines "$HOST_KEYS_DIR/$f" >>"$OUTPUT"
-    fi
-  done
+if [[ -f "$HOST_KEYS_DIR/$TASK_SPEC_ENV_FILE" ]]; then
+  emit_valid_lines "$HOST_KEYS_DIR/$TASK_SPEC_ENV_FILE" >>"$OUTPUT"
 fi
 
 chmod 0600 "$OUTPUT"

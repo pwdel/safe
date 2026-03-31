@@ -9,7 +9,7 @@ apps = false
 image_generation = false
 codex_hooks = true
 
-[projects."/Users/patrick/Projects/safe"]
+[projects."~/Projects/safe"]
 trust_level = "trusted"
 
 [notice.model_migrations]
