@@ -50,13 +50,13 @@ Equivalent via unified wrapper:
 
 ```bash
 cd ~/Projects/safe
-bash infra/scripts/safectl.sh --host <droplet-ip> remote bootstrap
+./safe --host <droplet-ip> remote bootstrap
 ```
 
 Optional preflight before bootstrap:
 
 ```bash
-bash infra/scripts/safectl.sh check remote
+./safe check remote
 ```
 
 What this does:

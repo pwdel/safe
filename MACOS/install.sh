@@ -104,7 +104,7 @@ Next recommended steps:
   1. Restart your shell or run: source ~/.zprofile && source ~/.zshrc
   2. cd $PROJECTS_DIR/safe && direnv allow && pre-commit install
   3. cd $PROJECTS_DIR/mlx-test && direnv allow && uv sync
-  4. cd $PROJECTS_DIR/safe && bash scripts/opencode-local.sh auth login
+  4. cd $PROJECTS_DIR/safe && ./safe check local
   5. If Docker Desktop was installed, open it once before using socialpredict
   6. Verify Ansible and Multipass with: ansible --version && multipass version
   7. Try the shell helpers: safe-bootstrap && safe-vm

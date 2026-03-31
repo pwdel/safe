@@ -13,13 +13,13 @@ Required:
   - pass --host <ip-or-hostname>, set TARGET_HOST, or set SAFE_TARGET_HOST in ~/.keys/safe/terraform.env
 
 Examples:
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote bootstrap
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote operator-shell
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote runner-shell
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote codex-login
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote helper safe-runner-status
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote fork-shell socialpredict
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote helper safe-sync-task-spec
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote helper safe-enter-task-spec
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote helper safe-run-task-runner --once
-  bash infra/scripts/safectl.sh remote helper safe-runner-status
+  ./safe --host 203.0.113.10 remote bootstrap
+  ./safe --host 203.0.113.10 remote operator-shell
+  ./safe --host 203.0.113.10 remote runner-shell
+  ./safe --host 203.0.113.10 remote codex-login
+  ./safe --host 203.0.113.10 remote helper safe-runner-status
+  ./safe --host 203.0.113.10 remote fork-shell socialpredict
+  ./safe --host 203.0.113.10 remote helper safe-sync-task-spec
+  ./safe --host 203.0.113.10 remote helper safe-enter-task-spec
+  ./safe --host 203.0.113.10 remote helper safe-run-task-runner --once
+  ./safe remote helper safe-runner-status

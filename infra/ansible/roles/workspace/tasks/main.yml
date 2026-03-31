@@ -564,10 +564,19 @@
         exit 0
       fi
 
-      set -a
-      # shellcheck disable=SC1090
-      source "$env_file"
-      set +a
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+          continue
+        fi
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+          key="${BASH_REMATCH[1]}"
+          value="${BASH_REMATCH[2]}"
+          export "$key=$value"
+          continue
+        fi
+        echo "Invalid line in $env_file: $line" >&2
+        exit 1
+      done <"$env_file"
 
       if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
         echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file; skipping task sync."
@@ -638,10 +647,19 @@
         exit 1
       fi
 
-      set -a
-      # shellcheck disable=SC1090
-      source "$env_file"
-      set +a
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+          continue
+        fi
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+          key="${BASH_REMATCH[1]}"
+          value="${BASH_REMATCH[2]}"
+          export "$key=$value"
+          continue
+        fi
+        echo "Invalid line in $env_file: $line" >&2
+        exit 1
+      done <"$env_file"
 
       spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
       target="{{ fork_root }}/$spec_dir"
@@ -673,10 +691,19 @@
         exit 0
       fi
 
-      set -a
-      # shellcheck disable=SC1090
-      source "$env_file"
-      set +a
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+          continue
+        fi
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+          key="${BASH_REMATCH[1]}"
+          value="${BASH_REMATCH[2]}"
+          export "$key=$value"
+          continue
+        fi
+        echo "Invalid line in $env_file: $line" >&2
+        exit 1
+      done <"$env_file"
 
       if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
         echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file." >&2
@@ -684,7 +711,7 @@
       fi
 
       spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
-      setup_cmd="${SAFE_TASK_SETUP_CMD:-./agent-assets install --tool codex --yes}"
+      setup_cmd="${SAFE_TASK_SETUP_CMD:-./agent-assets install --tool codex --yes --overwrite-unmanaged}"
       target="{{ fork_root }}/$spec_dir"
       if [[ ! -d "$target" ]]; then
         echo "Task spec checkout not found: $target" >&2
@@ -693,7 +720,37 @@
       fi
 
       cd {{ workspace_root }}/docker
-      exec docker compose exec --workdir "/workspace/$spec_dir" coding bash -lc "$setup_cmd"
+
+      seal_runner_hooks() {
+        docker compose exec --user 0 coding bash -lc '
+          if [[ -d /home/agent/.git-hooks ]]; then
+            chmod 0555 /home/agent/.git-hooks || true
+          fi
+        '
+      }
+
+      unseal_runner_hooks() {
+        docker compose exec --user 0 coding bash -lc '
+          if [[ -d /home/agent/.git-hooks ]]; then
+            chmod 0777 /home/agent/.git-hooks || true
+          fi
+        '
+      }
+
+      trap seal_runner_hooks EXIT
+      unseal_runner_hooks
+      docker compose exec --workdir "/workspace/$spec_dir" coding bash -lc "$setup_cmd"
+      docker compose exec coding bash -lc '
+        if [[ -d /home/agent/.git-hooks/.managed ]]; then
+          chmod -R a-w /home/agent/.git-hooks/.managed || true
+        fi
+        if [[ -f /home/agent/.git-hooks/pre-commit ]]; then
+          chmod a-w /home/agent/.git-hooks/pre-commit || true
+        fi
+        if [[ -f /home/agent/.git-hooks/pre-push ]]; then
+          chmod a-w /home/agent/.git-hooks/pre-push || true
+        fi
+      '
 
 - name: Create helper to run task repo codex-runner manually
   copy:
@@ -714,10 +771,19 @@
         exit 0
       fi
 
-      set -a
-      # shellcheck disable=SC1090
-      source "$env_file"
-      set +a
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+          continue
+        fi
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+          key="${BASH_REMATCH[1]}"
+          value="${BASH_REMATCH[2]}"
+          export "$key=$value"
+          continue
+        fi
+        echo "Invalid line in $env_file: $line" >&2
+        exit 1
+      done <"$env_file"
 
       if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
         echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file." >&2

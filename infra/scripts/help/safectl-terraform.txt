@@ -19,8 +19,8 @@ Auth/env behavior:
   - On destroy, safectl removes SAFE_TARGET_HOST from terraform.env.
 
 Examples:
-  bash infra/scripts/safectl.sh terraform init
-  bash infra/scripts/safectl.sh terraform plan
-  bash infra/scripts/safectl.sh terraform output-host
-  bash infra/scripts/safectl.sh --auto-approve terraform destroy
-  bash infra/scripts/safectl.sh --auto-approve terraform deploy
+  ./safe terraform init
+  ./safe terraform plan
+  ./safe terraform output-host
+  ./safe --auto-approve terraform destroy
+  ./safe --auto-approve terraform deploy

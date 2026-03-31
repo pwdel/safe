@@ -1,24 +1,24 @@
 # Objective
 
-Ensure OpenCode guardrails run reliably in the full `safe` runtime stack:
+Ensure `safe` infrastructure and guardrails run reliably in the full runtime stack:
 
 - macOS host
 - Multipass VM
 - Docker container inside the VM
 
-Specifically, the pre-compaction hook path must work end-to-end when OpenCode runs in-container:
+Specifically, provisioning and runtime guardrails must work end-to-end for containerized agent runs:
 
-1. A project-local Python environment is created with `uv` / `uv sync`.
-2. OpenCode runs from that environment in the container.
-3. OpenCode hooks can execute Python-based scripts, including `scripts/opencode/precompact-context.sh`, which depends on `python3`.
-4. Hook execution is verifiable from logs (`Precompact complete`) during normal OpenCode runs.
+1. Host preflight checks and key contracts are explicit and actionable.
+2. VM bootstrap/provisioning is repeatable for local and remote targets.
+3. The coding runner stays non-root with hardened filesystem/runtime behavior.
+4. Task execution (`codex-runner.sh`) remains a human-triggered action, not an automatic bootstrap step.
 
 ## Acceptance Criteria
 
-- Docker image/container includes `python3`, `uv`, and required runtime dependencies.
-- `uv sync` succeeds in-container and creates a usable virtual environment.
-- OpenCode session in-container successfully executes the precompact hook script.
-- A documented smoke test command proves hook execution inside the Multipass -> Docker path.
+- Docker image/container includes required runtime dependencies and quality tooling.
+- `./safe local bootstrap` and `./safe --host <ip> remote bootstrap` both converge to the same guardrailed VM/container state.
+- Runner hardening is verifiable (`agent` non-root, read-only home, no Docker socket).
+- A documented smoke test path proves runner lifecycle and shell access inside the Multipass -> Docker path.
 
 ## Project Checklist
 
@@ -47,9 +47,9 @@ Already in place:
 Still incomplete:
 
 - Create a new repo that serves as the source of truth for the auto-coding environment pulled into `safe` runtimes
-- Define the machine setup performed inside the coding image, including Codex, Claude, OpenCode, Go, and required Go tools
+- Define the machine setup performed inside the coding image, including Codex, Claude, Go, and required Go tools
 - Validate that pulling code from within the VM works from inside the Docker container
-- Validate authentication from inside the container to Codex, Claude, and OpenCode against the chosen models
+- Validate authentication from inside the container to Codex and Claude against the chosen models
 - Ensure hooks, agents, skills, and the full auto-coding environment can be installed and activated inside the container
 - Create a sandbox GitHub account for fork-only automation
 - Review `MACOS/` and `LINUX/` for consolidation into `../machinesetup` and replace local setup docs with pointers where appropriate
@@ -69,9 +69,9 @@ Still incomplete:
 - [x] Define how sandbox GitHub credentials are injected into the runtime
 - [x] Define how Codex / OpenAI auth is injected into the runtime without leaving broad secrets behind
 - [x] Ensure the VM can install Docker and reliably build, pull, and start the coding image
-- [ ] Define and automate the machine setup inside the coding image for Codex, Claude, OpenCode, Go, and required Go tools
+- [ ] Define and automate the machine setup inside the coding image for Codex, Claude, Go, and required Go tools
 - [ ] Validate pull operations from inside the VM-hosted Docker container
-- [ ] Validate container auth flows for Codex, Claude, and OpenCode against the chosen models
+- [ ] Validate container auth flows for Codex and Claude against the chosen models
 - [ ] Ensure hooks, agents, skills, and the full auto-coding environment can be installed and activated inside the container
 - [x] Add disposable runner reset / teardown scripts
 - [x] Add VM reset / rebuild scripts

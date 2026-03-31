@@ -201,20 +201,16 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-### OpenCode
+### Safe Infra Entry Point
 
-- OpenCode is included because it currently offers a more Claude Code like hook/plugin surface
-- This repo keeps the project config at `opencode.json`
-- The active repo-local plugin lives at `.opencode/plugins/guardrails.js`
-- `scripts/opencode-local.sh` simulates user-scoped XDG paths inside the repo
-
-Useful commands:
+Use the repo root `./safe` wrapper as the main command interface:
 
 ```bash
 cd ~/Projects/safe
-bash scripts/opencode-local.sh --version
-bash scripts/opencode-local.sh auth login
-bash scripts/opencode-local.sh
+./safe check local
+./safe local bootstrap
+./safe local status
+./safe local runner-shell
 ```
 
 ## VM and provisioning layer
@@ -239,14 +235,14 @@ Vagrant still belongs in the broader machine setup toolbox, but it is not the re
 ```bash
 cd ~/Projects/safe
 pre-commit install
-bash infra/scripts/bootstrap_mac.sh
+./safe local bootstrap
 ```
 
 Notes:
 
 - `direnv allow` is optional for VM bootstrap; it is only needed if you want repo-local environment overrides such as `CODEX_HOME`
-- `bash infra/scripts/bootstrap_mac.sh` creates or starts the Multipass instance `safevm`, copies the control repo into the guest, writes `infra/ansible/inventory/hosts.yml`, seeds your `~/.ssh/id_ed25519.pub` into the guest, and runs Ansible provisioning
-- `bash infra/scripts/mp-shell.sh` opens a shell in the guest after bootstrap
+- `./safe local bootstrap` creates or starts the Multipass instance `safevm`, copies the control repo into the guest, writes `infra/ansible/inventory/hosts.yml`, seeds your `~/.ssh/id_ed25519.pub` into the guest, and runs Ansible provisioning
+- `./safe local shell` opens a shell in the guest after bootstrap
 
 ### `mlx-test`
 
@@ -359,7 +355,6 @@ Optional environment flags:
 - `uv --version`
 - `pyenv --version`
 - `pre-commit --version`
-- `opencode --version`
 - `ansible --version`
 - `multipass version`
 - `codex --version`
@@ -372,4 +367,4 @@ This document intentionally favors current working practice over preserving ever
 
 - shell aliases for `python` and `pip` are not installed by default
 - `pip-tools` is not part of the default install because the active repos are using `uv`
-- Codex and OpenCode are documented as user-scoped tools that happen to be simulated inside `safe/`
+- `safe` runtime operations should be driven from the root `./safe` command
