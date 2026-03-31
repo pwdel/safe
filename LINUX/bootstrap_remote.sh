@@ -16,13 +16,16 @@ INFRA_DIR="$REPO_ROOT/infra"
 ANSIBLE_DIR="$INFRA_DIR/ansible"
 ARCHIVE_PATH="$(mktemp /tmp/safe-linux-bootstrap.XXXXXX.tar.gz)"
 AGENT_ENV_PATH="$(mktemp /tmp/safe-linux-agent-env.XXXXXX)"
+TASK_SPEC_ENV_PATH="$(mktemp /tmp/safe-linux-task-spec-env.XXXXXX)"
 RENDER_AGENT_ENV="$INFRA_DIR/scripts/render_host_agent_env.sh"
+RENDER_TASK_SPEC_ENV="$INFRA_DIR/scripts/render_host_task_spec_env.sh"
 CHECK_HOST_PREREQS="$INFRA_DIR/scripts/check_host_prereqs.sh"
 RENDER_INVENTORY="$ANSIBLE_DIR/scripts/render_inventory_for_ssh_host.sh"
 
 cleanup() {
   rm -f "$ARCHIVE_PATH"
   rm -f "$AGENT_ENV_PATH"
+  rm -f "$TASK_SPEC_ENV_PATH"
 }
 
 trap cleanup EXIT
@@ -66,9 +69,12 @@ fi
 
 if [[ -d "$HOST_KEYS_DIR" ]]; then
   OUTPUT="$AGENT_ENV_PATH" HOST_KEYS_DIR="$HOST_KEYS_DIR" bash "$RENDER_AGENT_ENV" >/dev/null
+  OUTPUT="$TASK_SPEC_ENV_PATH" HOST_KEYS_DIR="$HOST_KEYS_DIR" bash "$RENDER_TASK_SPEC_ENV" >/dev/null
 else
   : >"$AGENT_ENV_PATH"
   chmod 0600 "$AGENT_ENV_PATH"
+  : >"$TASK_SPEC_ENV_PATH"
+  chmod 0600 "$TASK_SPEC_ENV_PATH"
 fi
 
 tar \
@@ -88,6 +94,7 @@ ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
 
 scp "${SCP_OPTS[@]}" "$ARCHIVE_PATH" "$SSH_TARGET:/tmp/safe-control.tgz"
 scp "${SCP_OPTS[@]}" "$AGENT_ENV_PATH" "$SSH_TARGET:/tmp/agent.env"
+scp "${SCP_OPTS[@]}" "$TASK_SPEC_ENV_PATH" "$SSH_TARGET:/tmp/task-spec.env"
 
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "\
   set -euo pipefail && \
@@ -95,7 +102,8 @@ ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "\
   tar -xzf /tmp/safe-control.tgz -C /tmp/safe-control && \
   sudo cp -a /tmp/safe-control/. '$TARGET_APP_ROOT/' && \
   sudo install -m 0600 -o root -g root /tmp/agent.env '$SECRETS_ROOT/agent.env' && \
-  rm -rf /tmp/safe-control /tmp/safe-control.tgz /tmp/agent.env"
+  sudo install -m 0640 -o root -g root /tmp/task-spec.env '$SECRETS_ROOT/task-spec.env' && \
+  rm -rf /tmp/safe-control /tmp/safe-control.tgz /tmp/agent.env /tmp/task-spec.env"
 
 TARGET_HOST="$TARGET_HOST" \
 TARGET_USER="$TARGET_USER" \

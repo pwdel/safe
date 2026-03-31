@@ -5,6 +5,7 @@ Local commands:
   local runner-shell           Enter coding container shell via safe helper
   local codex-login            Run codex device login inside coding container
   local fork-shell <name>      Enter coding container shell in /workspace/<name>
+  local helper <safe-*> [...]  Run /usr/local/bin/safe-* helper on local VM via operator SSH
   local status                 Show VM info + runner status over operator SSH
   local test                   Validate operator access + runner start/status
   local help                   Show this local help
@@ -20,3 +21,7 @@ Examples:
   bash infra/scripts/safectl.sh local runner-shell
   bash infra/scripts/safectl.sh local codex-login
   bash infra/scripts/safectl.sh local fork-shell socialpredict
+  bash infra/scripts/safectl.sh local helper safe-rebuild-runner
+  bash infra/scripts/safectl.sh local helper safe-sync-task-spec
+  bash infra/scripts/safectl.sh local helper safe-enter-task-spec
+  bash infra/scripts/safectl.sh local helper safe-run-task-runner --once

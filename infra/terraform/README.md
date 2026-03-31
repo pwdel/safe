@@ -14,6 +14,25 @@ After provisioning, bootstrap the host with the existing control-plane script at
 - DigitalOcean API token with permission to manage Droplets/VPC/Firewalls/SSH keys
 - SSH keypair available on the control-plane machine
 
+## DigitalOcean Token Scopes
+
+Use a personal access token with `Custom Scopes` (least privilege), not `Full Access`.
+
+Recommended scopes for this Terraform module:
+
+- `account`: `read`
+- `actions`: `read`
+- `regions`: `read`
+- `sizes`: `read`
+- `image`: `read`
+- `droplet`: `create`, `read`, `update`, `delete`
+- `firewall`: `create`, `read`, `update`, `delete`
+- `vpc`: `create`, `read`, `update`, `delete`
+- `ssh_key`: `create`, `read`, `update`, `delete`
+- `tag`: `create`, `read`, `update`, `delete`
+
+If you only need inspection/listing (no `terraform apply/destroy`), `Read Only` is sufficient.
+
 ## Quick Start
 
 ```bash
@@ -25,6 +44,12 @@ Set your DigitalOcean token as an env var:
 
 ```bash
 export TF_VAR_do_token="<digitalocean-token>"
+```
+
+Recommended with `safectl`: store secrets in `~/.keys/safe/terraform.env`:
+
+```bash
+TF_VAR_do_token=<digitalocean-token>
 ```
 
 Then initialize and apply:

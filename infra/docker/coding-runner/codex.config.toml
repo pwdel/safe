@@ -1,0 +1,7 @@
+# Managed by safe control-plane.
+# This file is mounted read-only into the runner container at:
+#   /home/agent/.codex/config.toml
+#
+# Keep this file minimal and stable. Task-specific agent assets should be
+# installed from the task repo (for example via ./agent-assets) instead of
+# mutating this baseline file during runs.
