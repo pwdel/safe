@@ -171,26 +171,6 @@ print_box_line() {
   printf '| %s\n' "$1"
 }
 
-has_rendered_key() {
-  local needle="$1"
-  local key
-  for key in "${rendered_keys[@]:-}"; do
-    if [[ "$key" == "$needle" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-report_key_status() {
-  local key="$1"
-  if has_rendered_key "$key"; then
-    status_ok "key present: $key"
-  else
-    status_warn "key missing: $key"
-  fi
-}
-
 check_terraform_env_file() {
   local tf_file="$HOST_KEYS_DIR/$TERRAFORM_ENV_FILE"
   local tf_file_display
@@ -331,13 +311,11 @@ if [[ -d "$HOST_KEYS_DIR" ]]; then
       if [[ -f "$HOST_KEYS_DIR/$f" ]]; then
         status_ok "credential file present: $(display_path "$HOST_KEYS_DIR/$f")"
         found_parts=1
-      else
-        status_warn "credential file missing: $(display_path "$HOST_KEYS_DIR/$f")"
       fi
     done
   fi
   if (( found_parts == 0 )); then
-    status_warn "no runtime credential files found under $(display_path "$HOST_KEYS_DIR")"
+    status_ok "no runtime credential files found under $(display_path "$HOST_KEYS_DIR") (optional for web-auth workflows)"
   fi
 
   if OUTPUT="$tmp_env" HOST_KEYS_DIR="$HOST_KEYS_DIR" bash "$RENDER_AGENT_ENV" >/dev/null; then
@@ -352,25 +330,18 @@ if [[ -d "$HOST_KEYS_DIR" ]]; then
       if [[ ${#rendered_keys[@]} -gt 0 ]]; then
         status_ok "rendered env keys: ${rendered_keys[*]}"
       else
-        status_warn "rendered env file is empty"
+        status_ok "rendered env file is empty"
       fi
-
-      for key in "${RUNTIME_GITHUB_AUTH_KEYS[@]}"; do
-        report_key_status "$key"
-      done
-      for key in "${RUNTIME_MODEL_AUTH_KEYS[@]}"; do
-        report_key_status "$key"
-      done
 
       has_github=0
       has_model=0
       for key in "${RUNTIME_GITHUB_AUTH_KEYS[@]}"; do
-        if has_rendered_key "$key"; then
+        if grep -Eq "^${key}=" "$tmp_env"; then
           has_github=1
         fi
       done
       for key in "${RUNTIME_MODEL_AUTH_KEYS[@]}"; do
-        if has_rendered_key "$key"; then
+        if grep -Eq "^${key}=" "$tmp_env"; then
           has_model=1
         fi
       done
@@ -379,42 +350,20 @@ if [[ -d "$HOST_KEYS_DIR" ]]; then
         status_err "required credentials check failed"
       fi
     else
-      status_warn "rendered env file is empty"
+      status_ok "rendered env file is empty"
       rendered_keys=()
-      for key in "${RUNTIME_GITHUB_AUTH_KEYS[@]}"; do
-        report_key_status "$key"
-      done
-      for key in "${RUNTIME_MODEL_AUTH_KEYS[@]}"; do
-        report_key_status "$key"
-      done
       if (( REQUIRE_CREDENTIALS == 1 )); then
         status_err "required credentials check failed"
       fi
     fi
   else
     status_err "failed to render credentials from $(display_path "$HOST_KEYS_DIR")"
-    for key in "${RUNTIME_GITHUB_AUTH_KEYS[@]}"; do
-      status_warn "key missing: $key"
-    done
-    for key in "${RUNTIME_MODEL_AUTH_KEYS[@]}"; do
-      status_warn "key missing: $key"
-    done
   fi
 
   check_terraform_env_file
   check_task_spec_env_file
 else
   status_warn "host keys dir missing: $(display_path "$HOST_KEYS_DIR")"
-  status_warn "credential file missing: $(display_path "$HOST_KEYS_DIR/$RUNTIME_PRIMARY_ENV_FILE")"
-  for f in "${RUNTIME_SPLIT_ENV_FILES[@]}"; do
-    status_warn "credential file missing: $(display_path "$HOST_KEYS_DIR/$f")"
-  done
-  for key in "${RUNTIME_GITHUB_AUTH_KEYS[@]}"; do
-    status_warn "key missing: $key"
-  done
-  for key in "${RUNTIME_MODEL_AUTH_KEYS[@]}"; do
-    status_warn "key missing: $key"
-  done
   status_warn "terraform env file missing: $(display_path "$HOST_KEYS_DIR/$TERRAFORM_ENV_FILE")"
   status_warn "task spec env file missing: $(display_path "$HOST_KEYS_DIR/$TASK_SPEC_ENV_FILE")"
   if (( REQUIRE_CREDENTIALS == 1 )); then

@@ -6,7 +6,7 @@ Use this path when the remote host is the outer boundary (no Multipass).
 
 ```bash
 bash LINUX/install.sh
-bash infra/scripts/safectl.sh check remote
+./safe check remote
 ```
 
 ## 2) Provision target host
@@ -14,15 +14,15 @@ bash infra/scripts/safectl.sh check remote
 ### Option A: Existing Ubuntu VPS
 
 ```bash
-bash infra/scripts/safectl.sh --host <droplet-ip> remote bootstrap
+./safe --host <droplet-ip> remote bootstrap
 ```
 
 ### Option B: Create VPS with Terraform then deploy
 
 ```bash
-bash infra/scripts/safectl.sh terraform init
-bash infra/scripts/safectl.sh terraform plan
-bash infra/scripts/safectl.sh terraform deploy
+./safe terraform init
+./safe terraform plan
+./safe terraform deploy
 ```
 
 `terraform deploy` applies infra and executes the generated bootstrap command.
@@ -30,27 +30,27 @@ bash infra/scripts/safectl.sh terraform deploy
 ## 3) Verify and control remote runtime
 
 ```bash
-bash infra/scripts/safectl.sh --host <droplet-ip> remote helper safe-runner-status
-bash infra/scripts/safectl.sh --host <droplet-ip> remote helper safe-start-runner
-bash infra/scripts/safectl.sh --host <droplet-ip> remote helper safe-enter-fork <repo>
+./safe --host <droplet-ip> remote helper safe-runner-status
+./safe --host <droplet-ip> remote helper safe-start-runner
+./safe --host <droplet-ip> remote helper safe-enter-fork <repo>
 ```
 
 ## 4) Open remote shell
 
 ```bash
-bash infra/scripts/safectl.sh --host <droplet-ip> remote shell
+./safe --host <droplet-ip> remote shell
 ```
 
 ## 5) Open coding container shell remotely
 
 ```bash
-bash infra/scripts/safectl.sh --host <droplet-ip> remote runner-shell
+./safe --host <droplet-ip> remote runner-shell
 ```
 
 Run Codex device auth in the runner:
 
 ```bash
-bash infra/scripts/safectl.sh --host <droplet-ip> remote codex-login
+./safe --host <droplet-ip> remote codex-login
 ```
 
 If you see:
@@ -60,7 +60,7 @@ then enable device code authorization in your ChatGPT account security settings 
 For a specific fork workspace:
 
 ```bash
-bash infra/scripts/safectl.sh --host <droplet-ip> remote fork-shell <fork-name>
+./safe --host <droplet-ip> remote fork-shell <fork-name>
 ```
 
 ## Access model applied by Ansible

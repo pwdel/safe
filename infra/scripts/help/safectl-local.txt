@@ -16,12 +16,12 @@ Notes:
   - Use `local runner-shell` for direct container-shell access.
 
 Examples:
-  bash infra/scripts/safectl.sh local bootstrap
-  bash infra/scripts/safectl.sh local operator-shell
-  bash infra/scripts/safectl.sh local runner-shell
-  bash infra/scripts/safectl.sh local codex-login
-  bash infra/scripts/safectl.sh local fork-shell socialpredict
-  bash infra/scripts/safectl.sh local helper safe-rebuild-runner
-  bash infra/scripts/safectl.sh local helper safe-sync-task-spec
-  bash infra/scripts/safectl.sh local helper safe-enter-task-spec
-  bash infra/scripts/safectl.sh local helper safe-run-task-runner --once
+  ./safe local bootstrap
+  ./safe local operator-shell
+  ./safe local runner-shell
+  ./safe local codex-login
+  ./safe local fork-shell socialpredict
+  ./safe local helper safe-rebuild-runner
+  ./safe local helper safe-sync-task-spec
+  ./safe local helper safe-enter-task-spec
+  ./safe local helper safe-run-task-runner --once

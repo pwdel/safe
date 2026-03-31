@@ -6,12 +6,12 @@ Control-plane repo for running an isolated coding runtime on local Multipass or 
 
 ```bash
 # local
-bash infra/scripts/safectl.sh check local
-bash infra/scripts/safectl.sh local bootstrap
+./safe check local
+./safe local bootstrap
 
 # remote
-bash infra/scripts/safectl.sh check remote
-bash infra/scripts/safectl.sh --host <droplet-ip> remote bootstrap
+./safe check remote
+./safe --host <droplet-ip> remote bootstrap
 ```
 
 ## Machine Setup Hint
@@ -24,7 +24,7 @@ Put runtime credentials under `~/.keys/safe`:
 Then run:
 
 ```bash
-bash infra/scripts/safectl.sh check host
+./safe check host
 ```
 
 This prints per-file and per-key checks (`GH_TOKEN`, `GITHUB_TOKEN`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
@@ -32,7 +32,7 @@ This prints per-file and per-key checks (`GH_TOKEN`, `GITHUB_TOKEN`, `OPENAI_API
 For normal Codex account login (device/web flow) inside the runner:
 
 ```bash
-bash infra/scripts/safectl.sh local codex-login
+./safe local codex-login
 ```
 
 If Codex returns:

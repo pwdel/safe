@@ -8,6 +8,6 @@ Auth/env behavior:
   - If TF_VAR_do_token is present, it is mapped to DIGITALOCEAN_ACCESS_TOKEN.
 
 Examples:
-  bash infra/scripts/safectl.sh doctl version
-  bash infra/scripts/safectl.sh doctl auth list
-  bash infra/scripts/safectl.sh doctl compute droplet list
+  ./safe doctl version
+  ./safe doctl auth list
+  ./safe doctl compute droplet list

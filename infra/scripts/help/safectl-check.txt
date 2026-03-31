@@ -17,5 +17,5 @@ Notes:
   - Set REQUIRE_RUNTIME_CREDENTIALS=1 to fail when GitHub/model keys are missing.
 
 Examples:
-  bash infra/scripts/safectl.sh check host
-  REQUIRE_RUNTIME_CREDENTIALS=1 bash infra/scripts/safectl.sh check local
+  ./safe check host
+  REQUIRE_RUNTIME_CREDENTIALS=1 ./safe check local

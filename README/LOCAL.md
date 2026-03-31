@@ -10,13 +10,13 @@ Use this path to test the full isolation stack locally:
 
 ```bash
 bash MACOS/install.sh
-bash infra/scripts/safectl.sh check local
+./safe check local
 ```
 
 ## 2) Bootstrap VM + provision runtime
 
 ```bash
-bash infra/scripts/safectl.sh local bootstrap
+./safe local bootstrap
 ```
 
 This runs the same provisioning as `infra/scripts/bootstrap_mac.sh`.
@@ -24,8 +24,8 @@ This runs the same provisioning as `infra/scripts/bootstrap_mac.sh`.
 ## 3) Verify local runtime
 
 ```bash
-bash infra/scripts/safectl.sh local status
-bash infra/scripts/safectl.sh local test
+./safe local status
+./safe local test
 ```
 
 `local test` verifies:
@@ -37,26 +37,26 @@ bash infra/scripts/safectl.sh local test
 ## 4) Enter VM when needed
 
 ```bash
-bash infra/scripts/safectl.sh local shell
+./safe local shell
 ```
 
 ## 5) Enter VM as operator (docker-aware)
 
 ```bash
-bash infra/scripts/safectl.sh local operator-shell
+./safe local operator-shell
 docker ps -a
 ```
 
 ## 6) Enter coding container shell directly
 
 ```bash
-bash infra/scripts/safectl.sh local runner-shell
+./safe local runner-shell
 ```
 
 Run Codex device auth in the runner:
 
 ```bash
-bash infra/scripts/safectl.sh local codex-login
+./safe local codex-login
 ```
 
 If you see:
@@ -66,7 +66,7 @@ then enable device code authorization in your ChatGPT account security settings 
 Or for a specific fork workspace:
 
 ```bash
-bash infra/scripts/safectl.sh local fork-shell <fork-name>
+./safe local fork-shell <fork-name>
 ```
 
 ## 7) Optional manual fallback commands in VM

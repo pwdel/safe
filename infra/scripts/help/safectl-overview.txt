@@ -1,6 +1,6 @@
 Usage:
-  bash infra/scripts/safectl.sh [options] <group> <command> [args...]
-  bash infra/scripts/safectl.sh help [topic]
+  ./safe [options] <group> <command> [args...]
+  ./safe help [topic]
 
 Topics:
   overview   General usage and examples
@@ -21,15 +21,15 @@ Global options:
   -h, --help                    Show this overview
 
 Examples:
-  bash infra/scripts/safectl.sh local bootstrap
-  bash infra/scripts/safectl.sh local codex-login
-  bash infra/scripts/safectl.sh check host
-  bash infra/scripts/safectl.sh local test
-  bash infra/scripts/safectl.sh help local
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote bootstrap
-  bash infra/scripts/safectl.sh --host 203.0.113.10 remote runner-shell
-  bash infra/scripts/safectl.sh terraform deploy --var-file=terraform.tfvars
-  bash infra/scripts/safectl.sh doctl compute droplet list
+  ./safe local bootstrap
+  ./safe local codex-login
+  ./safe check host
+  ./safe local test
+  ./safe help local
+  ./safe --host 203.0.113.10 remote bootstrap
+  ./safe --host 203.0.113.10 remote runner-shell
+  ./safe terraform deploy --var-file=terraform.tfvars
+  ./safe doctl compute droplet list
 
 Notes:
   - terraform and doctl commands auto-load ~/.keys/safe/terraform.env when present.

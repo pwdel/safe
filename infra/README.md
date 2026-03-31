@@ -114,12 +114,12 @@ These are intended to make the VM itself disposable in the same way the runner c
 
 A unified wrapper is also available:
 
-- `bash infra/scripts/safectl.sh --help`
-- `bash infra/scripts/safectl.sh local bootstrap`
-- `bash infra/scripts/safectl.sh local test`
-- `bash infra/scripts/safectl.sh --host <droplet-ip> remote bootstrap`
-- `bash infra/scripts/safectl.sh --host <droplet-ip> remote helper safe-runner-status`
-- `bash infra/scripts/safectl.sh terraform deploy`
+- `./safe --help`
+- `./safe local bootstrap`
+- `./safe local test`
+- `./safe --host <droplet-ip> remote bootstrap`
+- `./safe --host <droplet-ip> remote helper safe-runner-status`
+- `./safe terraform deploy`
 
 ## What Bootstrap Creates
 
@@ -330,7 +330,7 @@ For Codex device auth, run `safe-codex-login` (or `safectl ... codex-login`).
 Run host preflight checks before bootstrap:
 
 ```bash
-bash infra/scripts/safectl.sh check host
+./safe check host
 ```
 
 ## Task Repo Flow (Human-Run)
