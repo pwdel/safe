@@ -52,7 +52,7 @@
     path: "/home/{{ admin_user }}/.keys/safe/agent.env"
   register: admin_agent_env_file
 
-- name: Sync admin key env file into runtime secrets when present
+- name: Sync admin key env file into runtime secrets when non-empty
   copy:
     src: "/home/{{ admin_user }}/.keys/safe/agent.env"
     dest: "{{ secrets_root }}/agent.env"
@@ -60,7 +60,7 @@
     owner: "{{ admin_user }}"
     group: "{{ runner_host_group }}"
     mode: "0640"
-  when: admin_agent_env_file.stat.exists
+  when: admin_agent_env_file.stat.exists and (admin_agent_env_file.stat.size | int) > 0
 
 - name: Ensure runtime agent env file exists
   file:
@@ -84,7 +84,7 @@
     path: "/home/{{ admin_user }}/.keys/safe/task-spec.env"
   register: admin_task_spec_env_file
 
-- name: Sync admin task spec env file into runtime secrets when present
+- name: Sync admin task spec env file into runtime secrets when non-empty
   copy:
     src: "/home/{{ admin_user }}/.keys/safe/task-spec.env"
     dest: "{{ secrets_root }}/task-spec.env"
@@ -92,7 +92,7 @@
     owner: root
     group: root
     mode: "0640"
-  when: admin_task_spec_env_file.stat.exists
+  when: admin_task_spec_env_file.stat.exists and (admin_task_spec_env_file.stat.size | int) > 0
 
 - name: Ensure runtime task spec env file exists
   file:
@@ -380,7 +380,7 @@
       #!/usr/bin/env bash
       set -euo pipefail
       cd {{ workspace_root }}/docker
-      exec docker compose exec coding safe-init-auth
+      exec docker compose exec -T coding safe-init-auth
 
 - name: Create helper to run Codex web/device login in coding container
   copy:
@@ -825,6 +825,13 @@
 - name: Start coding runner during provisioning
   command: /usr/local/bin/safe-start-runner
   when: auto_start_runner | bool
+
+- name: Initialize runner auth during provisioning
+  command: /usr/local/bin/safe-init-runner-auth
+  changed_when: false
+  when:
+    - auto_init_runner_auth | bool
+    - auto_start_runner | bool
 
 - name: Apply task repo agent-assets in runner during provisioning
   command: /usr/local/bin/safe-apply-task-assets
