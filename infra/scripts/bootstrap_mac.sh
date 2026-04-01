@@ -76,10 +76,11 @@ else
   multipass start "$VM_NAME"
 fi
 
-multipass exec "$VM_NAME" -- sudo mkdir -p /opt/safe-control
-multipass exec "$VM_NAME" -- sudo rm -rf /opt/safe-control/*
+# Recreate target dir to avoid stale file/dir type conflicts (e.g. root ./safe wrapper file).
+multipass exec "$VM_NAME" -- sudo bash -lc 'rm -rf /opt/safe-control && mkdir -p /opt/safe-control'
 
-tar \
+COPYFILE_DISABLE=1 tar \
+  --no-xattrs \
   --exclude='.git' \
   --exclude='.opencode-runtime' \
   --exclude='infra/ansible/.ansible' \
