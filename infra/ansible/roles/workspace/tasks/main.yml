@@ -12,8 +12,8 @@
     path: "{{ fork_root }}"
     state: directory
     owner: "{{ admin_user }}"
-    group: "{{ admin_user }}"
-    mode: "0755"
+    group: "{{ runner_host_group }}"
+    mode: "2775"
 
 - name: Create runtime secrets root
   file:
@@ -468,7 +468,9 @@
       fi
       EOF
       chmod 0755 "$hook_dir/pre-push"
-      chown -R {{ admin_user }}:{{ admin_user }} "$dest"
+      chown -R {{ admin_user }}:{{ runner_host_group }} "$dest"
+      find "$dest" -type d -exec chmod 2775 {} +
+      find "$dest" -type f -exec chmod g+rw {} +
 
 - name: Create helper to guard an existing fork checkout
   copy:
@@ -520,7 +522,9 @@
       fi
       EOF
       chmod 0755 "$hook_dir/pre-push"
-      chown -R {{ admin_user }}:{{ admin_user }} "$dest"
+      chown -R {{ admin_user }}:{{ runner_host_group }} "$dest"
+      find "$dest" -type d -exec chmod 2775 {} +
+      find "$dest" -type f -exec chmod g+rw {} +
 
 - name: Create helper to run app containers from a fork on the VM
   copy:
@@ -557,6 +561,7 @@
       if [[ "$(id -u)" == "0" ]]; then
         exec sudo -u {{ admin_user }} -H "$0" "$@"
       fi
+      cd /
 
       env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
       if [[ ! -s "$env_file" ]]; then
@@ -610,6 +615,9 @@
 
       git -C "$spec_dest" checkout --detach "$checkout_ref"
       git -C "$spec_dest" submodule update --init --recursive
+      chgrp -R {{ runner_host_group }} "$spec_dest"
+      find "$spec_dest" -type d -exec chmod 2775 {} +
+      find "$spec_dest" -type f -exec chmod g+rw {} +
 
       if [[ -n "${SAFE_TASK_TARGET_FORK_URL:-}" ]]; then
         target_name="${SAFE_TASK_TARGET_DIR:-socialpredict}"
@@ -811,8 +819,8 @@
   file:
     path: "{{ fork_root }}"
     owner: "{{ admin_user }}"
-    group: "{{ admin_user }}"
-    mode: "0755"
+    group: "{{ runner_host_group }}"
+    mode: "2775"
 
 - name: Sync configured task spec repo during provisioning
   command: /usr/local/bin/safe-sync-task-spec
