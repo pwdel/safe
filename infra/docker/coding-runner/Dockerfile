@@ -2,6 +2,7 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH=/usr/local/go/bin:/usr/local/safe-guard-bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV SAFE_TRUFFLEHOG_BIN=/home/agent/.tmp/trufflehog/bin/trufflehog
 ARG GO_VERSION=1.25.0
 ARG TRUFFLEHOG_VERSION=3.94.1
 ARG GOCYCLO_VERSION=latest
@@ -17,6 +18,7 @@ RUN apt-get update && apt-get install -y \
   git \
   jq \
   make \
+  nano \
   nodejs \
   npm \
   python3 \
@@ -92,7 +94,11 @@ fi
 if [[ ",${SKIP:-}," == *",trufflehog,"* ]]; then
   exit 0
 fi
-if ! command -v trufflehog >/dev/null 2>&1; then
+TRUFFLEHOG_BIN="${SAFE_TRUFFLEHOG_BIN:-/home/agent/.tmp/trufflehog/bin/trufflehog}"
+if [[ ! -x "$TRUFFLEHOG_BIN" ]]; then
+  TRUFFLEHOG_BIN="$(command -v trufflehog || true)"
+fi
+if [[ -z "$TRUFFLEHOG_BIN" ]]; then
   echo "pre-commit blocked: trufflehog is not available in this runner." >&2
   exit 1
 fi
@@ -114,7 +120,7 @@ if [[ "${#scan_targets[@]}" -eq 0 ]]; then
 fi
 
 echo "Running trufflehog pre-commit scan..."
-trufflehog filesystem --results=verified,unknown --fail "${scan_targets[@]}"
+"$TRUFFLEHOG_BIN" filesystem --results=verified,unknown --fail "${scan_targets[@]}"
 EOF
 
 RUN cat > /home/agent/.git-hooks/pre-push <<'EOF'
@@ -139,7 +145,11 @@ fi
 if [[ "${SAFE_SKIP_SECRET_SCAN:-0}" == "1" ]]; then
   exit 0
 fi
-if ! command -v trufflehog >/dev/null 2>&1; then
+TRUFFLEHOG_BIN="${SAFE_TRUFFLEHOG_BIN:-/home/agent/.tmp/trufflehog/bin/trufflehog}"
+if [[ ! -x "$TRUFFLEHOG_BIN" ]]; then
+  TRUFFLEHOG_BIN="$(command -v trufflehog || true)"
+fi
+if [[ -z "$TRUFFLEHOG_BIN" ]]; then
   echo "pre-push blocked: trufflehog is not available in this runner." >&2
   exit 1
 fi
@@ -153,13 +163,16 @@ else
 fi
 
 echo "Running trufflehog pre-push scan..."
-trufflehog git "file://$(pwd)" --since-commit "$scan_base" --branch HEAD --results=verified,unknown --fail
+"$TRUFFLEHOG_BIN" git "file://$(pwd)" --since-commit "$scan_base" --branch HEAD --results=verified,unknown --fail
 EOF
 
 COPY safe-init-auth.sh /usr/local/bin/safe-init-auth
 COPY safe-guard-command.sh /usr/local/bin/safe-guard-command
 COPY safe-shellrc /home/agent/.bashrc
 RUN chmod 0755 /usr/local/bin/safe-init-auth /usr/local/bin/safe-guard-command \
+  && mkdir -p "$(dirname "$SAFE_TRUFFLEHOG_BIN")" \
+  && cp /usr/local/bin/trufflehog "$SAFE_TRUFFLEHOG_BIN" \
+  && chmod 0755 "$SAFE_TRUFFLEHOG_BIN" \
   && mkdir -p /usr/local/safe-guard-bin \
   && ln -sf /usr/local/bin/safe-guard-command /usr/local/safe-guard-bin/rm \
   && ln -sf /usr/local/bin/safe-guard-command /usr/local/safe-guard-bin/chmod \

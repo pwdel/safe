@@ -558,30 +558,53 @@
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
+      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
+
+      load_task_env() {
+        if [[ ! -s "$env_file" ]]; then
+          return 0
+        fi
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+            continue
+          fi
+          if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            export "$key=$value"
+            continue
+          fi
+          echo "Invalid line in $env_file: $line" >&2
+          exit 1
+        done <"$env_file"
+      }
+
+      normalize_repo_permissions() {
+        local repo_path="$1"
+        if [[ ! -d "$repo_path" ]]; then
+          return 0
+        fi
+        chown -R {{ admin_user }}:{{ runner_host_group }} "$repo_path"
+        find "$repo_path" -type d -exec chmod 2775 {} +
+        find "$repo_path" -type f -exec chmod g+rw {} +
+      }
+
       if [[ "$(id -u)" == "0" ]]; then
+        load_task_env
+        spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
+        normalize_repo_permissions "{{ fork_root }}/$spec_dir"
+        target_name="${SAFE_TASK_TARGET_DIR:-socialpredict}"
+        normalize_repo_permissions "{{ fork_root }}/$target_name"
         exec sudo -u {{ admin_user }} -H "$0" "$@"
       fi
       cd /
 
-      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
       if [[ ! -s "$env_file" ]]; then
         echo "Task spec env is empty at $env_file; nothing to sync."
         exit 0
       fi
 
-      while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
-          continue
-        fi
-        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-          key="${BASH_REMATCH[1]}"
-          value="${BASH_REMATCH[2]}"
-          export "$key=$value"
-          continue
-        fi
-        echo "Invalid line in $env_file: $line" >&2
-        exit 1
-      done <"$env_file"
+      load_task_env
 
       if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
         echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file; skipping task sync."
