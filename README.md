@@ -47,6 +47,9 @@ Use two sandbox forks under your automation GitHub account and configure them in
 1. task repo fork (the workflow/spec repo)
 2. target repo fork (the codebase the runner edits)
 
+`SAFE_TASK_SPEC_REF` is required and must exist in the task repo fork
+(branch or tag; recommended: release tag such as `v0.0.1`).
+
 Example:
 
 ```bash

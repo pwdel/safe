@@ -40,6 +40,7 @@ bash LINUX/install.sh
 Before task automation, set both fork URLs in `~/.keys/safe/task-spec.env`:
 
 - `SAFE_TASK_SPEC_REPO`: your fork of the task/spec repo
+- `SAFE_TASK_SPEC_REF`: required ref in that fork (branch or tag, for example `v0.0.1`)
 - `SAFE_TASK_TARGET_FORK_URL`: your fork of the target code repo
 
 Then sync on the remote host:
