@@ -52,6 +52,11 @@
     path: "/home/{{ admin_user }}/.keys/safe/agent.env"
   register: admin_agent_env_file
 
+- name: Check if runtime agent env file exists
+  stat:
+    path: "{{ secrets_root }}/agent.env"
+  register: runtime_agent_env_file
+
 - name: Sync admin key env file into runtime secrets when non-empty
   copy:
     src: "/home/{{ admin_user }}/.keys/safe/agent.env"
@@ -60,7 +65,10 @@
     owner: "{{ admin_user }}"
     group: "{{ runner_host_group }}"
     mode: "0640"
-  when: admin_agent_env_file.stat.exists and (admin_agent_env_file.stat.size | int) > 0
+  when:
+    - admin_agent_env_file.stat.exists
+    - (admin_agent_env_file.stat.size | int) > 0
+    - (not runtime_agent_env_file.stat.exists) or ((runtime_agent_env_file.stat.size | default(0) | int) == 0)
 
 - name: Ensure runtime agent env file exists
   file:
@@ -84,6 +92,11 @@
     path: "/home/{{ admin_user }}/.keys/safe/task-spec.env"
   register: admin_task_spec_env_file
 
+- name: Check if runtime task spec env file exists
+  stat:
+    path: "{{ secrets_root }}/task-spec.env"
+  register: runtime_task_spec_env_file
+
 - name: Sync admin task spec env file into runtime secrets when non-empty
   copy:
     src: "/home/{{ admin_user }}/.keys/safe/task-spec.env"
@@ -92,7 +105,10 @@
     owner: root
     group: root
     mode: "0640"
-  when: admin_task_spec_env_file.stat.exists and (admin_task_spec_env_file.stat.size | int) > 0
+  when:
+    - admin_task_spec_env_file.stat.exists
+    - (admin_task_spec_env_file.stat.size | int) > 0
+    - (not runtime_task_spec_env_file.stat.exists) or ((runtime_task_spec_env_file.stat.size | default(0) | int) == 0)
 
 - name: Ensure runtime task spec env file exists
   file:
@@ -618,6 +634,14 @@
         git -C "$spec_dest" remote set-url origin "$SAFE_TASK_SPEC_REPO"
       else
         git clone "$SAFE_TASK_SPEC_REPO" "$spec_dest"
+      fi
+
+      if git -C "$spec_dest" remote get-url fork >/dev/null 2>&1; then
+        origin_url="$(git -C "$spec_dest" remote get-url origin)"
+        fork_url="$(git -C "$spec_dest" remote get-url fork)"
+        if [[ "$origin_url" == "$fork_url" ]]; then
+          git -C "$spec_dest" remote remove fork
+        fi
       fi
 
       git -C "$spec_dest" fetch --tags --prune origin
