@@ -35,6 +35,19 @@ bash LINUX/install.sh
 ./safe --host <droplet-ip> remote helper safe-enter-fork <repo>
 ```
 
+## 3a) Configure Two Sandbox Forks
+
+Before task automation, set both fork URLs in `~/.keys/safe/task-spec.env`:
+
+- `SAFE_TASK_SPEC_REPO`: your fork of the task/spec repo
+- `SAFE_TASK_TARGET_FORK_URL`: your fork of the target code repo
+
+Then sync on the remote host:
+
+```bash
+./safe --host <droplet-ip> remote helper safe-sync-task-spec
+```
+
 ## 4) Open remote shell
 
 ```bash

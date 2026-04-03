@@ -2,6 +2,8 @@
 
 This directory scaffolds the layered automation environment for `safe`.
 
+For consolidated security and hardening guidance, see `../SECURITY.md`.
+
 Target model:
 
 1. macOS host

@@ -39,11 +39,36 @@ If Codex returns:
 `Enable device code authorization for Codex in ChatGPT Security Settings`
 enable that setting in your ChatGPT account, then retry `local codex-login`.
 
+## Sandbox Fork Inputs (Required)
+
+Use two sandbox forks under your automation GitHub account and configure them in
+`~/.keys/safe/task-spec.env`:
+
+1. task repo fork (the workflow/spec repo)
+2. target repo fork (the codebase the runner edits)
+
+Example:
+
+```bash
+SAFE_TASK_SPEC_REPO=https://github.com/<sandbox-user>/<task-spec-fork>
+SAFE_TASK_SPEC_REF=<tag-or-branch>
+SAFE_TASK_TARGET_FORK_URL=https://github.com/<sandbox-user>/<target-repo-fork>
+SAFE_TASK_TARGET_UPSTREAM_URL=https://github.com/<upstream-org>/<target-repo>
+SAFE_TASK_TARGET_DIR=<target-repo-dir-name>
+```
+
+Then sync:
+
+```bash
+./safe local helper safe-sync-task-spec
+```
+
 ## Docs
 
 - Command reference: `README/HELP.md`
 - Local flow: `README/LOCAL.md`
 - Remote flow: `README/REMOTE.md`
 - Access levels: `README/ACCESS.md`
+- Security model and hardening: `SECURITY.md`
 - Isolation model and architecture: `README/ISOLATION.md`
 - Infra details: `infra/README.md`

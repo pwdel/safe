@@ -72,6 +72,7 @@ Still incomplete:
 - [ ] Define and automate the machine setup inside the coding image for Codex, Claude, Go, and required Go tools
 - [ ] Validate pull operations from inside the VM-hosted Docker container
 - [ ] Validate container auth flows for Codex and Claude against the chosen models
+- [ ] Fix TruffleHog hook updater failures in runner git hooks by disabling self-update in hook scans (`--no-update`) and documenting rebuild/verification steps
 - [ ] Ensure hooks, agents, skills, and the full auto-coding environment can be installed and activated inside the container
 - [x] Add disposable runner reset / teardown scripts
 - [x] Add VM reset / rebuild scripts
