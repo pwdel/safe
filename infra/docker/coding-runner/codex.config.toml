@@ -5,3 +5,5 @@
 # Keep this file minimal and stable. Task-specific agent assets should be
 # installed from the task repo (for example via ./agent-assets) instead of
 # mutating this baseline file during runs.
+model = "gpt-5"
+model_reasoning_effort = "high"
