@@ -7,6 +7,7 @@
 web_search = "disabled"
 tools.view_image = false
 model = "gpt-5"
+model_reasoning_effort = "high"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
