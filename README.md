@@ -41,11 +41,12 @@ enable that setting in your ChatGPT account, then retry `local codex-login`.
 
 ## Sandbox Fork Inputs (Required)
 
-Use two sandbox forks under your automation GitHub account and configure them in
+Use three sandbox repos under your automation GitHub account and configure them in
 `~/.keys/safe/task-spec.env`:
 
 1. task repo fork (the workflow/spec repo)
 2. target repo fork (the codebase the runner edits)
+3. logging repo (run logs/artifacts repo)
 
 `SAFE_TASK_SPEC_REF` is required and must exist in the task repo fork
 (branch or tag; recommended: release tag such as `v0.0.1`).
@@ -58,6 +59,9 @@ SAFE_TASK_SPEC_REF=<tag-or-branch>
 SAFE_TASK_TARGET_FORK_URL=https://github.com/<sandbox-user>/<target-repo-fork>
 SAFE_TASK_TARGET_UPSTREAM_URL=https://github.com/<upstream-org>/<target-repo>
 SAFE_TASK_TARGET_DIR=<target-repo-dir-name>
+SAFE_TASK_LOGGING_FORK_URL=https://github.com/<sandbox-user>/<logging-repo>
+SAFE_TASK_LOGGING_UPSTREAM_URL=https://github.com/<upstream-org>/<logging-repo>
+SAFE_TASK_LOGGING_DIR=<logging-repo-dir-name>
 ```
 
 Then sync:

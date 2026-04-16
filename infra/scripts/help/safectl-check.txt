@@ -13,7 +13,7 @@ Notes:
   - Renders credentials from ~/.keys/safe and validates supported runtime keys.
   - Runtime/Terraform key lists come from infra/scripts/env_key_manifest.sh.
   - Terraform vars should be in ~/.keys/safe/terraform.env using TF_VAR_* keys (required for DO: TF_VAR_do_token).
-  - Optional task-run config lives in ~/.keys/safe/task-spec.env (repo/ref + task-runner settings).
+  - Optional task-run config lives in ~/.keys/safe/task-spec.env (task + target + logging repo settings).
   - Set REQUIRE_RUNTIME_CREDENTIALS=1 to fail when GitHub/model keys are missing.
 
 Examples:
