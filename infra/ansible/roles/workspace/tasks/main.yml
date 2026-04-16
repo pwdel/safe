@@ -611,6 +611,10 @@
         normalize_repo_permissions "{{ fork_root }}/$spec_dir"
         target_name="${SAFE_TASK_TARGET_DIR:-socialpredict}"
         normalize_repo_permissions "{{ fork_root }}/$target_name"
+        if [[ -n "${SAFE_TASK_LOGGING_FORK_URL:-}" ]]; then
+          logging_name="${SAFE_TASK_LOGGING_DIR:-task-logging}"
+          normalize_repo_permissions "{{ fork_root }}/$logging_name"
+        fi
         exec sudo -u {{ admin_user }} -H "$0" "$@"
       fi
       cd /
@@ -680,6 +684,23 @@
           base_ref="${SAFE_TASK_SANDBOX_BASE_REF:-origin/main}"
           git -C "$target_dest" fetch --all --prune
           git -C "$target_dest" checkout -B "$SAFE_TASK_SANDBOX_BRANCH" "$base_ref"
+        fi
+      fi
+
+      if [[ -n "${SAFE_TASK_LOGGING_FORK_URL:-}" ]]; then
+        logging_name="${SAFE_TASK_LOGGING_DIR:-task-logging}"
+        logging_dest="{{ fork_root }}/$logging_name"
+        if [[ ! -d "$logging_dest/.git" ]]; then
+          if [[ -n "${SAFE_TASK_LOGGING_UPSTREAM_URL:-}" ]]; then
+            sudo -n /usr/local/bin/safe-clone-fork "$SAFE_TASK_LOGGING_FORK_URL" "$logging_name" "$SAFE_TASK_LOGGING_UPSTREAM_URL"
+          else
+            sudo -n /usr/local/bin/safe-clone-fork "$SAFE_TASK_LOGGING_FORK_URL" "$logging_name"
+          fi
+        fi
+        if [[ -n "${SAFE_TASK_LOGGING_SANDBOX_BRANCH:-}" ]]; then
+          base_ref="${SAFE_TASK_LOGGING_SANDBOX_BASE_REF:-origin/main}"
+          git -C "$logging_dest" fetch --all --prune
+          git -C "$logging_dest" checkout -B "$SAFE_TASK_LOGGING_SANDBOX_BRANCH" "$base_ref"
         fi
       fi
 
