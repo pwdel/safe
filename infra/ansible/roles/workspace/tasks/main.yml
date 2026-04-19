@@ -456,6 +456,7 @@
       git clone "$fork_url" "$dest"
       cd "$dest"
       git config remote.pushDefault origin
+      git config core.sharedRepository group
       if [[ -n "$upstream_url" ]]; then
         git remote add upstream "$upstream_url"
         git remote set-url --push upstream DISABLED
@@ -510,6 +511,7 @@
       fi
       cd "$dest"
       git config remote.pushDefault origin
+      git config core.sharedRepository group
       if [[ -n "$upstream_url" ]]; then
         if git remote get-url upstream >/dev/null 2>&1; then
           git remote set-url upstream "$upstream_url"
@@ -685,6 +687,7 @@
           git -C "$target_dest" fetch --all --prune
           git -C "$target_dest" checkout -B "$SAFE_TASK_SANDBOX_BRANCH" "$base_ref"
         fi
+        normalize_repo_permissions "$target_dest"
       fi
 
       if [[ -n "${SAFE_TASK_LOGGING_FORK_URL:-}" ]]; then
@@ -702,6 +705,7 @@
           git -C "$logging_dest" fetch --all --prune
           git -C "$logging_dest" checkout -B "$SAFE_TASK_LOGGING_SANDBOX_BRANCH" "$base_ref"
         fi
+        normalize_repo_permissions "$logging_dest"
       fi
 
 - name: Create helper to open shell in configured task spec repo
