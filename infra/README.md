@@ -141,8 +141,10 @@ After a successful bootstrap:
   - `/usr/local/bin/safe-remove-runner`
   - `/usr/local/bin/safe-rebuild-runner`
   - `/usr/local/bin/safe-runner-status`
+  - `/usr/local/bin/safe-prune-runtime`
   - `/usr/local/bin/safe-init-runner-auth`
   - `/usr/local/bin/safe-enter-runner`
+  - `/usr/local/bin/safe-run-openapi-contract-check`
   - `/usr/local/bin/safe-enter-fork`
   - `/usr/local/bin/safe-clone-fork`
   - `/usr/local/bin/safe-guard-fork`
@@ -226,6 +228,7 @@ The coding runner is intended to:
 - keep `/home/agent` root-owned and read-only, with only scoped writable paths (`/workspace`, `~/.tmp`, and mounted `~/.codex`)
 - mount `~/.codex/config.toml` from host secrets as read-only
 - include Go quality tooling used by agent workflows (`gofmt`, `go vet`, `gocyclo`, `golangci-lint`, `staticcheck`)
+- include external contract-testing tools (`kin-openapi-validate` and `schemathesis`) outside target repo `go.mod`
 
 Runtime shell guardrails are also enabled in the runner:
 
@@ -361,3 +364,18 @@ sudo /usr/local/bin/safe-sync-task-spec
 sudo /usr/local/bin/safe-enter-task-spec
 # inside container: run codex-runner.sh with chosen mode (safe/full-access/yolo) as a human decision
 ```
+
+OpenAPI contract validation and adversarial API checks can be run as an external toolchain (without adding dependencies to the target repo module graph):
+
+```bash
+./safe local helper safe-run-openapi-contract-check -- \
+  --checks all \
+  --max-failures 20
+```
+
+Default behavior:
+
+- validates `backend/docs/openapi.yaml` with `kin-openapi-validate`
+- starts backend from `backend` with `go run .`
+- runs `schemathesis run` against `http://127.0.0.1:8080`
+- writes one combined report under `<target-repo>/.codex-reports/contracts/`
