@@ -1,5 +1,6 @@
 Local commands:
   local bootstrap              Run macOS -> Multipass bootstrap + provisioning
+  local restart                Sync TASK/TARGET/LOGGING and create a fresh run branch
   local shell                  Open Multipass shell as default VM user (ubuntu)
   local operator-shell         SSH to VM as operator user
   local runner-shell           Enter coding container shell via safe helper
@@ -14,9 +15,14 @@ Notes:
   - `local shell` lands on VM host as ubuntu, which may not have direct docker socket access.
   - Use `local operator-shell` for operator-level host access.
   - Use `local runner-shell` for direct container-shell access.
+  - `local restart` runs `/usr/local/bin/safe-restart-task-workspace`.
+  - Use `local restart --fresh` to wipe local TASK/TARGET/LOGGING clones before re-sync.
 
 Examples:
   ./safe local bootstrap
+  ./safe local restart
+  ./safe local restart --fresh
+  ./safe local restart --branch run/20260420-120000
   ./safe local operator-shell
   ./safe local runner-shell
   ./safe local codex-login
