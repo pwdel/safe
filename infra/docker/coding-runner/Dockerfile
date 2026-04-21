@@ -8,6 +8,8 @@ ARG TRUFFLEHOG_VERSION=3.94.1
 ARG GOCYCLO_VERSION=latest
 ARG GOLANGCI_LINT_VERSION=latest
 ARG STATICCHECK_VERSION=latest
+ARG KIN_OPENAPI_VERSION=v0.133.0
+ARG SCHEMATHESIS_VERSION=latest
 
 RUN apt-get update && apt-get install -y \
   bash \
@@ -61,9 +63,25 @@ RUN arch="$(dpkg --print-architecture)" \
 RUN GOBIN=/usr/local/bin go install "github.com/fzipp/gocyclo/cmd/gocyclo@${GOCYCLO_VERSION}" \
   && GOBIN=/usr/local/bin go install "github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}" \
   && GOBIN=/usr/local/bin go install "honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION}" \
+  && rm -rf /tmp/safe-go-bin \
+  && mkdir -p /tmp/safe-go-bin \
+  && GOBIN=/tmp/safe-go-bin go install "github.com/getkin/kin-openapi/cmd/validate@${KIN_OPENAPI_VERSION}" \
+  && install -m 0755 /tmp/safe-go-bin/validate /usr/local/bin/kin-openapi-validate \
+  && rm -rf /tmp/safe-go-bin \
   && command -v /usr/local/bin/gocyclo >/dev/null \
   && /usr/local/bin/golangci-lint version >/dev/null \
-  && /usr/local/bin/staticcheck -version >/dev/null
+  && /usr/local/bin/staticcheck -version >/dev/null \
+  && command -v /usr/local/bin/kin-openapi-validate >/dev/null
+
+RUN python3 -m venv /opt/safe-python-tools \
+  && /opt/safe-python-tools/bin/pip install --no-cache-dir --upgrade pip \
+  && if [ "${SCHEMATHESIS_VERSION}" = "latest" ]; then \
+       /opt/safe-python-tools/bin/pip install --no-cache-dir schemathesis; \
+     else \
+       /opt/safe-python-tools/bin/pip install --no-cache-dir "schemathesis==${SCHEMATHESIS_VERSION}"; \
+     fi \
+  && ln -sf /opt/safe-python-tools/bin/schemathesis /usr/local/bin/schemathesis \
+  && /usr/local/bin/schemathesis --version >/dev/null
 
 RUN groupadd --gid 10001 agent \
   && useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash agent \
@@ -169,8 +187,9 @@ EOF
 
 COPY safe-init-auth.sh /usr/local/bin/safe-init-auth
 COPY safe-guard-command.sh /usr/local/bin/safe-guard-command
+COPY safe-openapi-contract-check.sh /usr/local/bin/safe-openapi-contract-check
 COPY safe-shellrc /home/agent/.bashrc
-RUN chmod 0755 /usr/local/bin/safe-init-auth /usr/local/bin/safe-guard-command \
+RUN chmod 0755 /usr/local/bin/safe-init-auth /usr/local/bin/safe-guard-command /usr/local/bin/safe-openapi-contract-check \
   && mkdir -p "$(dirname "$SAFE_TRUFFLEHOG_BIN")" \
   && cp /usr/local/bin/trufflehog "$SAFE_TRUFFLEHOG_BIN" \
   && chmod 0755 "$SAFE_TRUFFLEHOG_BIN" \

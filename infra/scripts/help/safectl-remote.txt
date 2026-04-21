@@ -19,6 +19,7 @@ Examples:
   ./safe --host 203.0.113.10 remote codex-login
   ./safe --host 203.0.113.10 remote helper safe-runner-status
   ./safe --host 203.0.113.10 remote helper safe-prune-runtime
+  ./safe --host 203.0.113.10 remote helper safe-run-openapi-contract-check
   ./safe --host 203.0.113.10 remote fork-shell socialpredict
   ./safe --host 203.0.113.10 remote helper safe-sync-task-spec
   ./safe --host 203.0.113.10 remote helper safe-enter-task-spec

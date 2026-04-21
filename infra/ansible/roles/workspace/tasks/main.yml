@@ -171,6 +171,15 @@
     group: "{{ admin_user }}"
     mode: "0644"
 
+- name: Copy docker runner OpenAPI contract check script
+  copy:
+    src: "{{ app_root }}/infra/docker/coding-runner/safe-openapi-contract-check.sh"
+    dest: "{{ workspace_root }}/docker/safe-openapi-contract-check.sh"
+    remote_src: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+
 - name: Copy docker runner shell profile
   copy:
     src: "{{ app_root }}/infra/docker/coding-runner/safe-shellrc"
@@ -537,6 +546,18 @@
       set -euo pipefail
       cd {{ workspace_root }}/docker
       exec docker compose exec coding bash
+
+- name: Create helper to run OpenAPI contract checks in coding container
+  copy:
+    dest: /usr/local/bin/safe-run-openapi-contract-check
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd {{ workspace_root }}/docker
+      exec docker compose exec coding safe-openapi-contract-check "$@"
 
 - name: Create helper to initialize runner auth from mounted runtime env
   copy:
