@@ -316,6 +316,15 @@ run_local_test() {
   TARGET_HOST="$vm_ip" remote_ssh_exec "sudo -n /usr/local/bin/safe-runner-status"
 }
 
+run_local_restart() {
+  local vm_ip
+  vm_ip="$(local_vm_ip)"
+  [[ -n "$vm_ip" ]] || die "Could not determine VM IP for $VM_NAME."
+  local cmd
+  cmd="$(build_shell_cmd sudo -n /usr/local/bin/safe-restart-task-workspace "$@")"
+  TARGET_HOST="$vm_ip" remote_ssh_exec "$cmd"
+}
+
 run_remote_bootstrap() {
   ensure_target_host
   TARGET_HOST="$TARGET_HOST" \
@@ -499,6 +508,7 @@ case "$group" in
     case "$command" in
       help) show_help_topic local ;;
       bootstrap) run_local_bootstrap ;;
+      restart) run_local_restart "$@" ;;
       shell) run_local_shell ;;
       operator-shell) run_local_operator_shell ;;
       runner-shell) run_local_runner_shell ;;
@@ -514,6 +524,7 @@ case "$group" in
     case "$command" in
       help) show_help_topic remote ;;
       bootstrap) run_remote_bootstrap ;;
+      restart) run_remote_helper safe-restart-task-workspace "$@" ;;
       shell) remote_ssh_shell ;;
       operator-shell) remote_ssh_shell ;;
       runner-shell) run_remote_runner_shell ;;

@@ -145,6 +145,7 @@ After a successful bootstrap:
   - `/usr/local/bin/safe-init-runner-auth`
   - `/usr/local/bin/safe-enter-runner`
   - `/usr/local/bin/safe-run-openapi-contract-check`
+  - `/usr/local/bin/safe-restart-task-workspace`
   - `/usr/local/bin/safe-enter-fork`
   - `/usr/local/bin/safe-clone-fork`
   - `/usr/local/bin/safe-guard-fork`
@@ -356,6 +357,7 @@ Task execution is intentionally human-triggered. Provisioning can sync the task 
 - required: `SAFE_TASK_SPEC_REPO`, `SAFE_TASK_SPEC_REF`
 - optional: `SAFE_TASK_SPEC_DIR`, `SAFE_TASK_SETUP_CMD`, `SAFE_TASK_RUNNER_BIN`, `SAFE_TASK_CODEX_MODE`
 - optional fork wiring: `SAFE_TASK_TARGET_FORK_URL`, `SAFE_TASK_TARGET_UPSTREAM_URL`, `SAFE_TASK_TARGET_DIR`, `SAFE_TASK_SANDBOX_BRANCH`, `SAFE_TASK_SANDBOX_BASE_REF`
+- optional logging fork wiring: `SAFE_TASK_LOGGING_FORK_URL`, `SAFE_TASK_LOGGING_UPSTREAM_URL`, `SAFE_TASK_LOGGING_DIR`, `SAFE_TASK_LOGGING_SANDBOX_BRANCH`, `SAFE_TASK_LOGGING_SANDBOX_BASE_REF`
 
 Manual helper flow:
 
@@ -364,6 +366,28 @@ sudo /usr/local/bin/safe-sync-task-spec
 sudo /usr/local/bin/safe-enter-task-spec
 # inside container: run codex-runner.sh with chosen mode (safe/full-access/yolo) as a human decision
 ```
+
+`safe-sync-task-spec` checks out TASK at `SAFE_TASK_SPEC_REF` in detached mode; `local restart` promotes that pinned checkout to a new run branch.
+
+Recommended restart flow from the host control plane:
+
+```bash
+./safe local restart
+```
+
+For a true clean slate (delete local TASK/TARGET/LOGGING checkouts before cloning/sync):
+
+```bash
+./safe local restart --fresh
+```
+
+`local restart` behavior:
+
+- runs `safe-sync-task-spec`
+- creates a TASK run branch from the pinned `SAFE_TASK_SPEC_REF` checkout
+- resets TARGET/LOGGING repos to `origin/main`
+- creates a fresh run branch name (`run/YYYYMMDD-HHMMSS` by default) across all configured repos
+- with `--fresh`, removes local task/target/logging checkouts under `/srv/workspaces/forks` first
 
 OpenAPI contract validation and adversarial API checks can be run as an external toolchain (without adding dependencies to the target repo module graph):
 

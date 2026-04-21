@@ -780,6 +780,17 @@
         find "$repo_path" -type f -exec chmod g+rw {} +
       }
 
+      ensure_repo_remote() {
+        local repo_path="$1"
+        local remote_name="$2"
+        local remote_url="$3"
+        if git -C "$repo_path" remote get-url "$remote_name" >/dev/null 2>&1; then
+          git -C "$repo_path" remote set-url "$remote_name" "$remote_url"
+        else
+          git -C "$repo_path" remote add "$remote_name" "$remote_url"
+        fi
+      }
+
       if [[ "$(id -u)" == "0" ]]; then
         load_task_env
         spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
@@ -855,6 +866,11 @@
             sudo -n /usr/local/bin/safe-clone-fork "$SAFE_TASK_TARGET_FORK_URL" "$target_name"
           fi
         fi
+        ensure_repo_remote "$target_dest" origin "$SAFE_TASK_TARGET_FORK_URL"
+        if [[ -n "${SAFE_TASK_TARGET_UPSTREAM_URL:-}" ]]; then
+          ensure_repo_remote "$target_dest" upstream "$SAFE_TASK_TARGET_UPSTREAM_URL"
+          git -C "$target_dest" remote set-url --push upstream DISABLED
+        fi
         if [[ -n "${SAFE_TASK_SANDBOX_BRANCH:-}" ]]; then
           base_ref="${SAFE_TASK_SANDBOX_BASE_REF:-origin/main}"
           git -C "$target_dest" fetch --all --prune
@@ -872,6 +888,11 @@
           else
             sudo -n /usr/local/bin/safe-clone-fork "$SAFE_TASK_LOGGING_FORK_URL" "$logging_name"
           fi
+        fi
+        ensure_repo_remote "$logging_dest" origin "$SAFE_TASK_LOGGING_FORK_URL"
+        if [[ -n "${SAFE_TASK_LOGGING_UPSTREAM_URL:-}" ]]; then
+          ensure_repo_remote "$logging_dest" upstream "$SAFE_TASK_LOGGING_UPSTREAM_URL"
+          git -C "$logging_dest" remote set-url --push upstream DISABLED
         fi
         if [[ -n "${SAFE_TASK_LOGGING_SANDBOX_BRANCH:-}" ]]; then
           base_ref="${SAFE_TASK_LOGGING_SANDBOX_BASE_REF:-origin/main}"
@@ -924,6 +945,201 @@
 
       cd {{ workspace_root }}/docker
       exec docker compose exec --workdir "/workspace/$spec_dir" coding bash
+
+- name: Create helper to restart synced task workspace repos for a fresh run
+  copy:
+    dest: /usr/local/bin/safe-restart-task-workspace
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
+      fork_root="{{ fork_root }}"
+      run_stamp="$(date -u +%Y%m%d-%H%M%S)"
+      branch_name=""
+      fresh=0
+
+      usage() {
+        cat <<'EOF'
+      Usage: safe-restart-task-workspace [--fresh] [--branch NAME] [--stamp UTCSTAMP]
+
+      Actions:
+        1) Run safe-sync-task-spec
+        2) Fast-forward target and logging repos to origin/main
+        3) Create a fresh run branch across TASK/TARGET/LOGGING
+
+      Options:
+        --fresh         Delete local TASK/TARGET/LOGGING checkouts before sync
+        --branch NAME   Explicit branch name (overrides generated run/<stamp>)
+        --stamp VALUE   Override UTC stamp used in generated branch name (YYYYMMDD-HHMMSS)
+        -h, --help      Show this help
+      EOF
+      }
+
+      load_task_env() {
+        if [[ ! -s "$env_file" ]]; then
+          return 0
+        fi
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+            continue
+          fi
+          if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            export "$key=$value"
+            continue
+          fi
+          echo "Invalid line in $env_file: $line" >&2
+          exit 1
+        done <"$env_file"
+      }
+
+      prep_repo_for_run_branch() {
+        local repo_path="$1"
+        local label="$2"
+        local branch="$3"
+
+        if [[ ! -d "$repo_path/.git" ]]; then
+          echo "Skipping $label: repo not found at $repo_path"
+          return 0
+        fi
+        if [[ -n "$(git -C "$repo_path" status --porcelain)" ]]; then
+          echo "Refusing to reset dirty repo: $repo_path" >&2
+          echo "Commit, stash, or clean local changes before restart." >&2
+          exit 1
+        fi
+        git -C "$repo_path" fetch origin --prune
+        if ! git -C "$repo_path" rev-parse --verify --quiet "origin/main^{commit}" >/dev/null; then
+          echo "$label is missing origin/main: $repo_path" >&2
+          exit 1
+        fi
+        git -C "$repo_path" checkout -B main origin/main
+        if git -C "$repo_path" rev-parse --verify --quiet "$branch^{commit}" >/dev/null; then
+          echo "Branch already exists in $label: $branch" >&2
+          exit 1
+        fi
+        git -C "$repo_path" checkout -b "$branch" main
+        echo "$label ready on branch $branch at $(git -C "$repo_path" rev-parse --short HEAD)"
+      }
+
+      prep_task_repo_for_run_branch() {
+        local repo_path="$1"
+        local label="$2"
+        local branch="$3"
+        local pinned_head=""
+
+        if [[ ! -d "$repo_path/.git" ]]; then
+          echo "Skipping $label: repo not found at $repo_path"
+          return 0
+        fi
+        if [[ -n "$(git -C "$repo_path" status --porcelain)" ]]; then
+          echo "Refusing to branch dirty repo: $repo_path" >&2
+          echo "Commit, stash, or clean local changes before restart." >&2
+          exit 1
+        fi
+        git -C "$repo_path" fetch origin --prune --tags || true
+        if git -C "$repo_path" rev-parse --verify --quiet "$branch^{commit}" >/dev/null; then
+          echo "Branch already exists in $label: $branch" >&2
+          exit 1
+        fi
+        pinned_head="$(git -C "$repo_path" rev-parse --verify HEAD)"
+        git -C "$repo_path" checkout -b "$branch" "$pinned_head"
+        echo "$label ready on branch $branch at $(git -C "$repo_path" rev-parse --short HEAD) (from pinned SAFE_TASK_SPEC_REF)"
+      }
+
+      remove_repo_if_present() {
+        local repo_path="$1"
+        local label="$2"
+        if [[ ! -e "$repo_path" ]]; then
+          return 0
+        fi
+        if [[ "$repo_path" != "$fork_root/"* ]]; then
+          echo "Refusing to remove path outside fork root: $repo_path" >&2
+          exit 1
+        fi
+        rm -rf "$repo_path"
+        echo "Removed $label at $repo_path"
+      }
+
+      if [[ "$(id -u)" == "0" ]]; then
+        exec sudo -u {{ admin_user }} -H "$0" "$@"
+      fi
+
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --fresh)
+            fresh=1
+            shift
+            ;;
+          --branch)
+            [[ $# -ge 2 ]] || { echo "--branch requires a value" >&2; exit 2; }
+            branch_name="$2"
+            shift 2
+            ;;
+          --stamp)
+            [[ $# -ge 2 ]] || { echo "--stamp requires a value" >&2; exit 2; }
+            run_stamp="$2"
+            shift 2
+            ;;
+          -h|--help)
+            usage
+            exit 0
+            ;;
+          *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+        esac
+      done
+
+      [[ "$run_stamp" =~ ^[0-9]{8}-[0-9]{6}$ ]] || { echo "Invalid --stamp format: $run_stamp (expected YYYYMMDD-HHMMSS)" >&2; exit 2; }
+
+      load_task_env
+      if [[ -z "${SAFE_TASK_SPEC_REPO:-}" || -z "${SAFE_TASK_SPEC_REF:-}" ]]; then
+        echo "SAFE_TASK_SPEC_REPO and SAFE_TASK_SPEC_REF are required in $env_file." >&2
+        exit 1
+      fi
+
+      branch_prefix="${SAFE_TASK_RUN_BRANCH_PREFIX:-run}"
+      if [[ -z "$branch_name" ]]; then
+        branch_name="${branch_prefix}/${run_stamp}"
+      fi
+
+      target_name="${SAFE_TASK_TARGET_DIR:-socialpredict}"
+      target_dest="$fork_root/$target_name"
+      logging_name="${SAFE_TASK_LOGGING_DIR:-task-logging}"
+      logging_dest="$fork_root/$logging_name"
+      spec_dir="${SAFE_TASK_SPEC_DIR:-spec-socialpredict-tasks}"
+      spec_dest="$fork_root/$spec_dir"
+
+      if (( fresh == 1 )); then
+        remove_repo_if_present "$spec_dest" "task repo ($spec_dir)"
+        remove_repo_if_present "$target_dest" "target repo ($target_name)"
+        if [[ -n "${SAFE_TASK_LOGGING_FORK_URL:-}" ]]; then
+          remove_repo_if_present "$logging_dest" "logging repo ($logging_name)"
+        fi
+      fi
+
+      sudo -n /usr/local/bin/safe-sync-task-spec
+      prep_task_repo_for_run_branch "$spec_dest" "task repo ($spec_dir)" "$branch_name"
+      prep_repo_for_run_branch "$target_dest" "target repo ($target_name)" "$branch_name"
+
+      if [[ -n "${SAFE_TASK_LOGGING_FORK_URL:-}" ]]; then
+        prep_repo_for_run_branch "$logging_dest" "logging repo ($logging_name)" "$branch_name"
+      else
+        echo "No SAFE_TASK_LOGGING_FORK_URL configured; skipping logging repo branch prep."
+      fi
+
+      if [[ -d "$spec_dest/.git" ]]; then
+        echo "task repo source pinned by SAFE_TASK_SPEC_REF=${SAFE_TASK_SPEC_REF}"
+      fi
+
+      echo "restart complete: branch=$branch_name"
 
 - name: Create helper to apply task repo agent-assets in runner
   copy:

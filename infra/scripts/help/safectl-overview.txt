@@ -22,11 +22,13 @@ Global options:
 
 Examples:
   ./safe local bootstrap
+  ./safe local restart --fresh
   ./safe local codex-login
   ./safe check host
   ./safe local test
   ./safe help local
   ./safe --host 203.0.113.10 remote bootstrap
+  ./safe --host 203.0.113.10 remote restart
   ./safe --host 203.0.113.10 remote runner-shell
   ./safe terraform deploy --var-file=terraform.tfvars
   ./safe doctl compute droplet list
