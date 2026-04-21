@@ -22,6 +22,7 @@ Examples:
   ./safe local codex-login
   ./safe local fork-shell socialpredict
   ./safe local helper safe-rebuild-runner
+  ./safe local helper safe-prune-runtime
   ./safe local helper safe-sync-task-spec
   ./safe local helper safe-enter-task-spec
   ./safe local helper safe-run-task-runner --once

@@ -268,6 +268,15 @@ The runner lifecycle is intentionally disposable:
 - `safe-remove-runner` removes the coding container without deleting fork data
 - `safe-rebuild-runner` recreates the container from the current image definition
 - `safe-runner-status` shows current runner status
+- `safe-prune-runtime` reclaims disk space (Docker artifacts, runner caches, old logs/reports)
+
+When long-running Codex sessions consume disk, run:
+
+```bash
+sudo /usr/local/bin/safe-prune-runtime --days 14
+```
+
+Use `--dry-run` to preview removals.
 
 Runner image defaults:
 
