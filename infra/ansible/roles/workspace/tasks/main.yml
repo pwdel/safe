@@ -374,6 +374,158 @@
       cd {{ workspace_root }}/docker
       exec docker compose ps
 
+- name: Create helper to prune VM/runtime disk usage
+  copy:
+    dest: /usr/local/bin/safe-prune-runtime
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      usage() {
+        cat <<'EOF'
+      Usage: safe-prune-runtime [--days N] [--dry-run] [--skip-docker-prune]
+
+      Options:
+        --days N               Retention window for logging artifacts in days (default: 14)
+        --dry-run              Show planned removals without deleting files
+        --skip-docker-prune    Skip docker system/builder prune
+        -h, --help             Show this help
+      EOF
+      }
+
+      if [[ "$(id -u)" == "0" ]]; then
+        exec sudo -u {{ admin_user }} -H "$0" "$@"
+      fi
+
+      retention_days="${SAFE_PRUNE_RETENTION_DAYS:-14}"
+      dry_run=0
+      skip_docker_prune=0
+
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --days)
+            [[ $# -ge 2 ]] || { echo "--days requires a value" >&2; exit 2; }
+            retention_days="$2"
+            shift 2
+            ;;
+          --dry-run)
+            dry_run=1
+            shift
+            ;;
+          --skip-docker-prune)
+            skip_docker_prune=1
+            shift
+            ;;
+          -h|--help)
+            usage
+            exit 0
+            ;;
+          *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+        esac
+      done
+
+      [[ "$retention_days" =~ ^[0-9]+$ ]] || { echo "Invalid --days value: $retention_days" >&2; exit 2; }
+
+      env_file="/home/{{ admin_user }}/.keys/safe/task-spec.env"
+      if [[ -f "$env_file" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+            continue
+          fi
+          if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            export "$key=$value"
+            continue
+          fi
+          echo "Invalid line in $env_file: $line" >&2
+          exit 1
+        done <"$env_file"
+      fi
+
+      workspace_docker="{{ workspace_root }}/docker"
+      fork_root="{{ fork_root }}"
+      logging_dir="${SAFE_TASK_LOGGING_DIR:-log-socialpredict-tasks}"
+      logging_root="$fork_root/$logging_dir"
+      runs_dir="$logging_root/.codex-runs"
+      reports_dir="$logging_root/.codex-reports/tasks"
+
+      run_cmd() {
+        if (( dry_run == 1 )); then
+          printf '[dry-run] %s\n' "$*"
+        else
+          "$@"
+        fi
+      }
+
+      prune_old_subdirs() {
+        local root="$1"
+        if [[ ! -d "$root" ]]; then
+          return 0
+        fi
+        while IFS= read -r -d '' dir; do
+          if (( dry_run == 1 )); then
+            echo "[dry-run] rm -rf $dir"
+          else
+            rm -rf "$dir"
+          fi
+        done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -mtime +"$retention_days" -print0)
+      }
+
+      echo "Disk usage before cleanup:"
+      df -h / "$fork_root" || true
+      echo
+      echo "Docker usage before cleanup:"
+      docker system df || true
+
+      if (( skip_docker_prune == 0 )); then
+        run_cmd docker system prune -af
+        run_cmd docker builder prune -af
+      fi
+
+      if [[ -f "$workspace_docker/compose.yml" ]]; then
+        if docker compose -f "$workspace_docker/compose.yml" ps --status running --services 2>/dev/null | grep -qx "coding"; then
+          if (( dry_run == 1 )); then
+            echo "[dry-run] docker compose -f $workspace_docker/compose.yml exec -T coding rm runner caches"
+          else
+            docker compose -f "$workspace_docker/compose.yml" exec -T coding bash -lc '
+              rm -rf /home/agent/.tmp/go-build/* \
+                     /home/agent/.tmp/xdg-cache/* \
+                     /home/agent/.tmp/npm-cache/*'
+          fi
+        fi
+      fi
+
+      prune_old_subdirs "$runs_dir"
+      prune_old_subdirs "$reports_dir"
+
+      for repo in "$fork_root"/*; do
+        if [[ ! -d "$repo/.git" ]]; then
+          continue
+        fi
+        if (( dry_run == 1 )); then
+          echo "[dry-run] git -C $repo gc"
+          echo "[dry-run] find $repo/.git -name gc.log -delete"
+        else
+          git -C "$repo" gc || true
+          find "$repo/.git" -name gc.log -delete || true
+        fi
+      done
+
+      echo
+      echo "Disk usage after cleanup:"
+      df -h / "$fork_root" || true
+      echo
+      echo "Docker usage after cleanup:"
+      docker system df || true
+
 - name: Create helper to open shell in coding container
   copy:
     dest: /usr/local/bin/safe-enter-runner
