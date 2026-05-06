@@ -23,9 +23,11 @@ RUN apt-get update && apt-get install -y \
   nano \
   nodejs \
   npm \
+  postgresql \
   tree \
   python3 \
   python3-pip \
+  python3-yaml \
   python3-venv \
   ripgrep \
   zsh \
@@ -83,6 +85,17 @@ RUN python3 -m venv /opt/safe-python-tools \
   && ln -sf /opt/safe-python-tools/bin/schemathesis /usr/local/bin/schemathesis \
   && /usr/local/bin/schemathesis --version >/dev/null
 
+RUN pg_bindir="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -n1)" \
+  && [ -n "$pg_bindir" ] \
+  && ln -sf "$pg_bindir/initdb" /usr/local/bin/initdb \
+  && ln -sf "$pg_bindir/postgres" /usr/local/bin/postgres \
+  && ln -sf "$pg_bindir/pg_isready" /usr/local/bin/pg_isready \
+  && ln -sf "$pg_bindir/createdb" /usr/local/bin/createdb \
+  && command -v /usr/local/bin/initdb >/dev/null \
+  && command -v /usr/local/bin/postgres >/dev/null \
+  && command -v /usr/local/bin/pg_isready >/dev/null \
+  && command -v /usr/local/bin/createdb >/dev/null
+
 RUN groupadd --gid 10001 agent \
   && useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash agent \
   && mkdir -p /workspace /home/agent/.tmp/go-build /home/agent/.codex \
@@ -100,6 +113,8 @@ RUN cat > /home/agent/.gitconfig <<'EOF'
   directory = *
 [core]
   hooksPath = /home/agent/.git-hooks
+[credential "https://github.com"]
+  helper = "!f() { token=\"${GH_TOKEN:-${GITHUB_TOKEN:-}}\"; if [ -z \"$token\" ]; then exit 0; fi; echo username=x-access-token; printf 'password=%s\\n' \"$token\"; }; f"
 EOF
 
 RUN mkdir -p /home/agent/.git-hooks \
@@ -139,7 +154,7 @@ if [[ "${#scan_targets[@]}" -eq 0 ]]; then
 fi
 
 echo "Running trufflehog pre-commit scan..."
-"$TRUFFLEHOG_BIN" filesystem --results=verified,unknown --fail "${scan_targets[@]}"
+"$TRUFFLEHOG_BIN" --no-update filesystem --results=verified,unknown --fail "${scan_targets[@]}"
 EOF
 
 RUN cat > /home/agent/.git-hooks/pre-push <<'EOF'
@@ -182,7 +197,7 @@ else
 fi
 
 echo "Running trufflehog pre-push scan..."
-"$TRUFFLEHOG_BIN" git "file://$(pwd)" --since-commit "$scan_base" --branch HEAD --results=verified,unknown --fail
+"$TRUFFLEHOG_BIN" --no-update git "file://$(pwd)" --since-commit "$scan_base" --branch HEAD --results=verified,unknown --fail
 EOF
 
 COPY safe-init-auth.sh /usr/local/bin/safe-init-auth

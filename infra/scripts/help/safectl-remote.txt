@@ -20,6 +20,7 @@ Examples:
   ./safe --host 203.0.113.10 remote operator-shell
   ./safe --host 203.0.113.10 remote runner-shell
   ./safe --host 203.0.113.10 remote codex-login
+  ./safe --host 203.0.113.10 remote helper safe-update-codex
   ./safe --host 203.0.113.10 remote helper safe-runner-status
   ./safe --host 203.0.113.10 remote helper safe-prune-runtime
   ./safe --host 203.0.113.10 remote helper safe-run-openapi-contract-check
