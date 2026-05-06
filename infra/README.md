@@ -230,6 +230,7 @@ The coding runner is intended to:
 - mount `~/.codex/config.toml` from host secrets as read-only
 - include Go quality tooling used by agent workflows (`gofmt`, `go vet`, `gocyclo`, `golangci-lint`, `staticcheck`)
 - include external contract-testing tools (`kin-openapi-validate` and `schemathesis`) outside target repo `go.mod`
+- include local Postgres binaries (`initdb`, `postgres`, `pg_isready`, `createdb`) for non-Docker backend runtime checks
 
 Runtime shell guardrails are also enabled in the runner:
 
@@ -237,7 +238,7 @@ Runtime shell guardrails are also enabled in the runner:
 - current wrapped commands: `rm`, `chmod`, `chown`, `dd`, `mkfs`, `fdisk`, `sfdisk`, `parted`, `mount`, `umount`
 - intentional bypass requires `SAFE_ALLOW_RISKY=1`
 - global git hooks are enabled via `core.hooksPath=~/.git-hooks`
-- `pre-commit` and `pre-push` run `trufflehog` to catch secret leaks before commit/push
+- `pre-commit` and `pre-push` run `trufflehog --no-update` to catch secret leaks before commit/push
 
 ## Network Policy
 
@@ -341,6 +342,7 @@ The intended values are:
 
 The helper `safe-init-runner-auth` initializes GitHub CLI auth inside the coding runner from those injected environment variables.
 For Codex device auth, run `safe-codex-login` (or `safectl ... codex-login`).
+For managed Codex CLI upgrades inside the runner, run `safe-update-codex` (or `safectl ... helper safe-update-codex`).
 
 Run host preflight checks before bootstrap:
 

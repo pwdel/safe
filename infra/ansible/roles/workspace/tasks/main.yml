@@ -583,6 +583,24 @@
       cd {{ workspace_root }}/docker
       exec docker compose exec coding codex login --device-auth
 
+- name: Create helper to update Codex CLI inside coding container
+  copy:
+    dest: /usr/local/bin/safe-update-codex
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      if [[ "$#" -ne 0 ]]; then
+        echo "Usage: safe-update-codex" >&2
+        echo "Updates only @openai/codex inside the coding container." >&2
+        exit 1
+      fi
+      cd {{ workspace_root }}/docker
+      docker compose exec -u 0 -e NPM_CONFIG_CACHE=/tmp/npm-cache -T coding npm install -g @openai/codex
+      exec docker compose exec -T coding codex --version
+
 - name: Create helper to open shell in coding container at a fork path
   copy:
     dest: /usr/local/bin/safe-enter-fork

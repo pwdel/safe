@@ -40,6 +40,7 @@ Secret scanning is enforced at commit/push in runner hooks:
 
 - `pre-commit`: scans staged files with TruffleHog.
 - `pre-push`: scans commits being pushed.
+- Both scans run with `trufflehog --no-update` to avoid updater write failures in locked-down shells.
 - Both fail closed if TruffleHog is unavailable.
 
 To avoid updater failures in a locked-down home:
